@@ -1,0 +1,187 @@
+.root {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  min-height: 100dvh;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--foreground) 4%, transparent) 0%,
+    transparent 55%
+  );
+
+  &Messages {
+    padding: 1rem 0.75rem;
+    height: 100dvh;
+    background: color-mix(in srgb, var(--foreground) 5%, transparent);
+    overflow-y: auto;
+    border-right: 1px solid color-mix(in srgb, var(--foreground) 15%, transparent);
+
+    &Header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.5rem 0.5rem 1rem;
+
+      h2 {
+        font-size: 1rem;
+        font-weight: 700;
+      }
+
+      button {
+        border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+        background: color-mix(in srgb, var(--foreground) 8%, transparent);
+        color: inherit;
+        padding: 0.45rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+    }
+
+    &List {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+  }
+
+  &Chatbox {
+    padding: 1rem;
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    justify-content: space-between;
+    flex-direction: column;
+  }
+
+  &Header {
+    flex-shrink: 0;
+    border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+    background: color-mix(in srgb, var(--foreground) 4%, transparent);
+    border-radius: 0.85rem;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+
+    &Profile {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+
+      h1 {
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+
+      p {
+        margin-top: 0.1rem;
+        font-size: 0.82rem;
+        color: color-mix(in srgb, var(--foreground) 70%, transparent);
+      }
+
+      &Dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #3abf7f;
+        box-shadow: 0 0 0 3px color-mix(in srgb, #3abf7f 25%, transparent);
+      }
+    }
+
+    &Actions {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+
+      button {
+        border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+        background: color-mix(in srgb, var(--foreground) 8%, transparent);
+        color: inherit;
+        border-radius: 999px;
+        padding: 0.4rem 0.7rem;
+        font-size: 0.78rem;
+        cursor: pointer;
+      }
+    }
+  }
+
+  &Content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow-y: auto;
+    margin: 1rem 0 0.85rem;
+    padding-right: 0.3rem;
+
+    &Received,
+    &Sent {
+      padding: 0.6rem 0.8rem;
+      border-radius: 0.8rem;
+      max-width: min(75%, 520px);
+      border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+
+      p {
+        margin: 0;
+        line-height: 1.4;
+      }
+
+      span {
+        margin-top: 0.3rem;
+        display: block;
+        font-size: 0.72rem;
+        color: color-mix(in srgb, var(--foreground) 70%, transparent);
+      }
+    }
+
+    &Received {
+      align-self: flex-start;
+      background: color-mix(in srgb, var(--foreground) 5%, transparent);
+    }
+
+    &Sent {
+      align-self: flex-end;
+      background: color-mix(in srgb, #7860ff 18%, transparent);
+    }
+  }
+
+  &Footer {
+    flex-shrink: 0;
+    display: flex;
+    gap: 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+    border-radius: 999px;
+    padding: 0.4rem;
+    background: color-mix(in srgb, var(--foreground) 4%, transparent);
+
+    input {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      padding: 0 0.65rem;
+      background: transparent;
+      color: inherit;
+      outline: none;
+    }
+
+    button {
+      border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+      padding: 0.45rem 0.85rem;
+      border-radius: 999px;
+      cursor: pointer;
+      background: color-mix(in srgb, var(--foreground) 8%, transparent);
+      color: inherit;
+    }
+  }
+
+  @media (max-width: 960px) {
+    grid-template-columns: 1fr;
+
+    &Messages {
+      display: none;
+    }
+  }
+}

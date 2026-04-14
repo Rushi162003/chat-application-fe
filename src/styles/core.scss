@@ -1,0 +1,227 @@
+@use "base";
+@use "variables/colors";
+@use "variables/typography";
+
+html,
+body {
+    padding: 0;
+    color: colors.$white-100;
+    overflow-y: hidden;
+    background: colors.$background-primary;
+    -webkit-overflow-scrolling: touch;
+    width: 100vw;
+    height: 56.25vw;
+    /* 100/56.25 = 1.778 */
+    max-height: 100vh;
+    //max-width: 199.78vh; /* 16/9 = 1.778 */
+    margin: auto;
+    position: relative;
+}
+
+#__next,
+main {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+main {
+    display: flex;
+    margin: auto;
+    // height: calc(100% - 84.92px);
+}
+
+html {
+    font-family: typography.$font-family;
+    font-size: typography.$base-font-size;
+    line-height: typography.$base-line-height;
+}
+
+*,
+*:before,
+*:after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-text-size-adjust: none;
+    -webkit-tap-highlight-color: transparent;
+    -ms-text-size-adjust: none;
+    outline: none;
+    //overflow: hidden;
+}
+
+ul,
+ol {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+}
+
+input {
+    line-height: normal;
+}
+
+a,
+a:hover,
+a:focus,
+a:visited {
+    text-decoration: none;
+}
+
+button,
+input,
+optgroup,
+select,
+textarea {
+    color: inherit;
+    font: inherit;
+    margin: 0;
+    appearance: none;
+    border: none;
+}
+
+button {
+    color: inherit;
+    font: inherit;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    text-align: left;
+}
+
+::-moz-focus-inner {
+    border: none;
+    outline: none;
+}
+
+input::-ms-clear {
+    display: none;
+}
+
+input:disabled,
+input:focus,
+input:hover,
+textarea:disabled {
+    background: inherit;
+}
+
+::-webkit-input-placeholder {
+    color: colors.$white-100;
+    font-size: inherit;
+}
+
+::-ms-placeholder {
+    color: colors.$white-100;
+    font-size: inherit;
+}
+
+// Simplified Breakpoints
+$tablet: 768px;
+$small-laptop: 1025px;
+$small-medium-laptop: 1280px;
+$medium-laptop: 1366px;
+$medium-large-laptop: 1440px;
+$large-medium-laptop: 1500px;
+$large-laptop: 1600px;
+$full-hd: 1920px;
+
+// Height Breakpoints
+$height-large: 792px;
+$height-medium: 696px;
+$height-small: 596px;
+$height-xsmall: 496px;
+
+html {
+    font-size: 45%;
+}
+
+// Tablets: 768px - 1023px
+@media (min-width: $tablet) and (max-width: ($small-laptop - 1px)) {
+    html {
+        font-size: 40%;
+    }
+
+    button {
+        padding: 0 !important;
+    }
+}
+
+// Small Laptops: 1024px - 1279px
+@media (min-width: $small-laptop) and (max-width: ($small-medium-laptop - 1px)) {
+    html {
+        font-size: 45%;
+    }
+
+    button {
+        padding: 0 !important;
+    }
+}
+
+// Small-Medium Laptops: 1280px - 1365px
+@media (min-width: $small-medium-laptop) and (max-width: ($medium-laptop - 1px)) {
+    html {
+        font-size: 65%;
+    }
+}
+
+// Medium Laptops: 1366px - 1439px
+@media (min-width: $medium-laptop) and (max-width: ($medium-large-laptop - 1px)) {
+    html {
+        font-size: 72%;
+    }
+}
+
+// Medium-Large Laptops: 1440px - 1499px
+@media (min-width: $medium-large-laptop) and (max-width: ($large-medium-laptop - 1px)) {
+    html {
+        font-size: 80%;
+    }
+}
+
+// Large-Medium Laptops: 1500px - 1599px
+@media (min-width: $large-medium-laptop) and (max-width: ($full-hd - 1px)) {
+    html {
+        font-size: 85%;
+    }
+}
+
+// Full HD+: ≥ 1920px
+@media (min-width: $full-hd) {
+    html {
+        font-size: 100%;
+    }
+}
+
+@media (max-height: $height-large) {
+    html {
+        font-size: 80%;
+    }
+}
+
+@media (max-height: $height-medium) {
+    html {
+        font-size: 65%;
+    }
+}
+
+@media (max-height: $height-small) {
+    html {
+        font-size: 57%;
+    }
+}
+
+@media (max-height: $height-xsmall) {
+    html {
+        font-size: 40%;
+    }
+
+    button {
+        padding: 0 !important;
+    }
+}

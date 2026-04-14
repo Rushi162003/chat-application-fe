@@ -1,0 +1,202 @@
+@use "colors";
+
+$font-family: var(--font-family);
+
+$base-font-size-numeric: 16;
+$base-font-size: #{$base-font-size-numeric}px;
+$base-line-height: 1.2;
+
+@function toRem($value) {
+    $remValue: calc($value / $base-font-size-numeric) + rem;
+    @return $remValue;
+}
+
+@function toEm($value, $context: $base-font-size-numeric) {
+    $emValue: calc($value / $context) + em;
+    @return $emValue;
+}
+
+@mixin d1-text() {
+    font-weight: 500;
+    font-size: toRem(48);
+    line-height: toRem(56);
+    letter-spacing: -0.04em;
+}
+
+@mixin d2-text() {
+    font-weight: 500;
+    font-size: toRem(40);
+    line-height: toRem(48);
+    letter-spacing: -0.04em;
+}
+
+@mixin d3-text() {
+    font-weight: 500;
+    font-size: toRem(32);
+    line-height: toRem(40);
+    letter-spacing: -0.04em;
+}
+
+@mixin h1-text() {
+    font-weight: 500;
+    font-size: toRem(28);
+    line-height: toRem(32);
+    letter-spacing: -0.03em;
+}
+
+@mixin h2-text() {
+    font-weight: 500;
+    font-size: toRem(24);
+    line-height: toRem(28);
+    letter-spacing: -0.03em;
+}
+
+@mixin h3-text() {
+    font-weight: 500;
+    font-size: toRem(20);
+    line-height: toRem(24);
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+}
+
+@mixin h4-text() {
+    font-weight: 500;
+    font-size: toRem(18);
+    line-height: toRem(22);
+    letter-spacing: -0.02em;
+}
+
+@mixin h5-text() {
+    font-weight: 500;
+    font-size: toRem(16);
+    line-height: toRem(20);
+    letter-spacing: -0.02em;
+}
+
+@mixin s1-text() {
+    font-weight: 400;
+    font-size: toRem(16);
+    line-height: toRem(20);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+}
+
+@mixin s2-text() {
+    font-weight: 400;
+    font-size: toRem(14);
+    line-height: toRem(18);
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+}
+
+@mixin s3-text() {
+    font-weight: 400;
+    font-size: toRem(14);
+    line-height: toRem(18);
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+}
+
+@mixin s4-text() {
+    font-weight: 500;
+    font-size: toRem(18);
+    line-height: toRem(20);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+}
+
+@mixin s5-text(){
+    font-weight: 600;
+    font-size: toRem(22);
+    line-height: toREm(22);
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+}
+@mixin s6-text() {
+    font-weight: 500;
+    font-size: toRem(10);
+    line-height: toRem(10);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+}
+
+@mixin p1-text() {
+    font-weight: 400;
+    font-size: toRem(16);
+    line-height: toRem(20);
+    letter-spacing: -0.01em;
+}
+
+@mixin p2-text() {
+    font-weight: 400;
+    font-size: toRem(14);
+    line-height: toRem(18);
+    letter-spacing: -0.01em;
+}
+
+@mixin p3-text() {
+    font-weight: 400;
+    font-size: toRem(12);
+    line-height: toRem(16);
+    letter-spacing: -0.01em;
+}
+
+@mixin l1-text() {
+    font-weight: 400;
+    font-size: toRem(14);
+    line-height: toRem(18);
+    letter-spacing: -0.01em;
+    text-decoration-line: underline;
+    text-transform: uppercase;
+}
+
+@mixin l2-text() {
+    font-weight: 400;
+    font-size: toRem(12);
+    line-height: toRem(16);
+    letter-spacing: -0.01em;
+    text-decoration-line: underline;
+    text-transform: uppercase;
+}
+
+@mixin label-text() {
+    line-height: toRem(12);
+    font-size: toRem(12);
+    font-weight: 400;
+    letter-spacing: -0.16px;
+}
+
+@mixin chip-small-text() {
+    line-height: toRem(18);
+    font-size: toRem(12);
+    font-weight: 400;
+    letter-spacing: -0.16px;
+}
+
+@mixin header-text() {
+    font-size: toRem(16);
+    line-height: toRem(24);
+    font-weight: 400;
+    letter-spacing: -0.16px;
+}
+
+@mixin footer-text() {
+    font-size: toRem(12);
+    line-height: 120%;
+    font-weight: 400;
+}
+
+@mixin display-text() {
+    font-size: toRem(32);
+    font-weight: 500;
+    line-height: 120%;
+    letter-spacing: -0.64px;
+    text-transform: uppercase;
+}
+
+@mixin sub-display-text {
+    font-size: toRem(14);
+    font-weight: 500;
+    line-height: 120%;
+    text-transform: uppercase;
+}

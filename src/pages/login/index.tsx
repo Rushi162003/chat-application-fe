@@ -1,8 +1,9 @@
 import { useCallback, useState } from "react";
 import { API_ENDPOINTS } from "@/src/common/enums";
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import { useRouter } from "next/router";
 import Message from "@/src/components/Snackbar/message";
+import Cookies from "js-cookie";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function LoginPage() {
 
           const response = await axios.post(API_ENDPOINTS.LOGIN, formData);
           if (response.status === 200) {
+            Cookies.set("access", response.data.token);
             router.push("/");
           }
         } catch (error) {
@@ -37,6 +39,7 @@ export default function LoginPage() {
           const response = await axios.post(API_ENDPOINTS.SIGNUP, formData);
 
           if (response.status === 200) {
+            Cookies.set("access", response.data.token);
             router.push("/");
           }
         } catch (error) {

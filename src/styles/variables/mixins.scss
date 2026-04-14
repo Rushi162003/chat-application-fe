@@ -1,0 +1,154 @@
+@use "sass:meta";
+@use "../variables/colors";
+@use "../variables/typography";
+
+@mixin container-border {
+    border: 1px solid;
+    border-image-source: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.14));
+    border-image-slice: 1;
+}
+
+@mixin sub-container-border {
+    border: 1px solid;
+    border-image-source: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0));
+    border-image-slice: 1;
+}
+
+@mixin solid-container-border {
+    border: 1px solid;
+    border-image-source: linear-gradient(to bottom, #272729, #2d2d2f);
+    border-image-slice: 1;
+}
+
+@mixin full-size-container() {
+    width: 100%;
+    height: 100%;
+}
+
+@mixin scrollbar() {
+    &::-webkit-scrollbar {
+        width: typography.toRem(8);
+        height: typography.toRem(8);
+    }
+
+    &::-webkit-scrollbar-track {
+        background: colors.$background-card-light-gray;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: colors.$background-secondary;
+        border-radius: 17px;
+        border: 1px solid colors.$background-card-light-gray;
+        cursor: pointer;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background: colors.$background-primary;
+    }
+}
+
+@mixin flex-center() {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@mixin hide-input-spinner {
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    & {
+        -moz-appearance: textfield;
+    }
+}
+
+@mixin display-flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@mixin display-flex-align {
+    display: flex;
+    align-items: center;
+}
+
+@mixin display-flex-space {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+@mixin display-flex-column {
+    display: flex;
+    flex-direction: column;
+}
+
+@mixin display-grid($columns, $gap, $rows: null) {
+    display: grid;
+
+    @if (meta.type-of($columns)=="number") {
+        grid-template-columns: repeat($columns, 1fr);
+    }
+
+    @else {
+        grid-template-columns: $columns;
+    }
+
+    @if ($rows) {
+        @if (meta.type-of($rows)=="number") {
+            grid-template-rows: repeat($rows, 1fr);
+        }
+
+        @else {
+            grid-template-rows: $rows;
+        }
+    }
+
+    align-items: center;
+    gap: typography.toRem($gap);
+}
+
+@mixin active() {
+    border: 1px solid colors.$ball-tag-light-yellow;
+    background: linear-gradient(180deg, rgba(171, 161, 75, 0.2) 0%, rgba(171, 161, 75, 0.1) 100%);
+}
+
+@mixin animationActive() {
+    position: relative;
+    border: 1px solid #b7b932;
+
+    &::after,
+    &::before {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation: glow 0.5s infinite alternate;
+    }
+}
+
+
+@mixin ellipsis($width: 100%) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: $width;
+}
+
+@mixin ellipsis-multi-line($lines: 2) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    width: 100%;
+}
