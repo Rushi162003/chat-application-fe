@@ -1,12 +1,21 @@
+"use client";
+
 import { useCallback, useState } from "react";
-import { API_ENDPOINTS } from "@/src/common/enums";
-import axios, { AxiosResponse } from "axios";
-import { useRouter } from "next/router";
+import { API_ENDPOINTS, PAGES } from "@/src/common/enums";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 import Message from "@/src/components/Snackbar/message";
 import Cookies from "js-cookie";
+import { axiosFetch } from "@/hooks/useAxios";
+import { miscStore } from "@/src/stores/miscStore";
 
 export default function LoginPage() {
   const router = useRouter();
+
+  const setMe = miscStore((state) => state.setMe);
+  const me = miscStore((state) => state.me);
+
+
   const [isLoginPage, setIsLoginPage] = useState<boolean>(true);
   const [formData, setFormData] = useState<{
     email: string;
@@ -19,11 +28,17 @@ export default function LoginPage() {
       e.preventDefault();
       if (isLoginPage) {
         try {
-
           const response = await axios.post(API_ENDPOINTS.LOGIN, formData);
           if (response.status === 200) {
             Cookies.set("access", response.data.token);
-            router.push("/");
+            const [me] = await axiosFetch({
+              url: API_ENDPOINTS.ME,
+              method: "GET",
+            });
+            if (me) {
+              setMe(me);
+            }
+            router.push(PAGES.HOME);
           }
         } catch (error) {
           if (axios.isAxiosError(error) && error.response) {
@@ -32,15 +47,20 @@ export default function LoginPage() {
             Message.error("An error occurred");
           }
         }
-
       } else {
         try {
-
           const response = await axios.post(API_ENDPOINTS.SIGNUP, formData);
 
           if (response.status === 200) {
             Cookies.set("access", response.data.token);
-            router.push("/");
+            const [me] = await axiosFetch({
+              url: API_ENDPOINTS.ME,
+              method: "GET",
+            });
+            if (me) {
+              setMe(me);
+            }
+            router.push(PAGES.HOME);
           }
         } catch (error) {
           if (axios.isAxiosError(error) && error.response) {
@@ -49,7 +69,6 @@ export default function LoginPage() {
             Message.error("An error occurred");
           }
         }
-
       }
     },
     [formData, isLoginPage, router]

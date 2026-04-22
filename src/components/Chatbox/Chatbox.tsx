@@ -1,57 +1,232 @@
-import styles from "./Chatbox.module.scss";
+"use client";
+
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import RecivedProfile from "../RecivedProfile/RecivedProfile";
 import { useSocket } from "@/hooks/useSocket";
+import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
 
-const Chatbox = () => {
+//styles
+import styles from "./Chatbox.module.scss";
+import { axiosFetch } from "@/hooks/useAxios";
+import { API_ENDPOINTS } from "@/src/common/enums";
+import Message from "../Snackbar/message";
+import { ChatResponse, MessageResponse } from "@/src/common/api-res";
+import { miscStore } from "@/src/stores/miscStore";
+import { Check, CheckCheck } from "lucide-react";
+import type { Socket } from "socket.io-client";
 
-  const socket = useSocket();
-  console.log("socket===============", socket);
-  const profile = {
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "1234567890",
-    avatar: "data:image/jpeg;base64,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",
-    address: "123 Main St, Anytown, USA",
-    city: "Anytown",
-    state: "CA",
-    zip: "12345",
-    time: "12:00 PM",
+const MESSAGES_PAGE_SIZE = 20;
+
+/** Server may process `read-message` before `join-chat` finishes; ack + fallback avoids that race. */
+const READ_AFTER_JOIN_FALLBACK_MS = 250;
+
+function emitJoinChatThenMarkMessagesRead(
+  socket: Socket,
+  chatId: string,
+  readPayloads: { messageId: string; chatId: string }[],
+) {
+  if (readPayloads.length === 0) {
+    socket.emit("join-chat", chatId);
+    return;
+  }
+
+  let readsEmitted = false;
+  const emitReadsOnce = () => {
+    if (readsEmitted) return;
+    readsEmitted = true;
+    readPayloads.forEach((p) => socket.emit("read-message", p));
   };
 
-  const conversations = [
-    { ...profile, name: "John Doe", time: "12:00 PM" },
-    { ...profile, name: "Alexa Marsh", time: "11:42 AM" },
-    { ...profile, name: "Ken Adams", time: "Yesterday" },
-    { ...profile, name: "Sofia Lee", time: "Mon" },
-  ];
+  socket.emit("join-chat", chatId, () => {
+    emitReadsOnce();
+  });
 
-  const messages = [
-    {
-      id: 1,
-      text: "Hey! Are we still on for the meeting?",
-      time: "11:31 AM",
-      isSent: false,
-    },
-    {
-      id: 2,
-      text: "Yes, in 20 mins. I am wrapping up the UI.",
-      time: "11:34 AM",
-      isSent: true,
-    },
-    {
-      id: 3,
-      text: "Great. Can you also share the latest screen?",
-      time: "11:35 AM",
-      isSent: false,
-    },
-    {
-      id: 4,
-      text: "Sure, I will send it right after this message.",
-      time: "11:36 AM",
-      isSent: true,
-    },
-    { id: 5, text: "Perfect, thanks!", time: "11:37 AM", isSent: false },
-  ];
+  window.setTimeout(emitReadsOnce, READ_AFTER_JOIN_FALLBACK_MS);
+}
+
+type OutgoingTickKind = "sent" | "delivered" | "read";
+
+const getOutgoingTickKind = (
+  message: MessageResponse,
+  myUserId: string,
+  peerUserId: string
+): OutgoingTickKind => {
+  const readByOther = (message.readBy ?? []).some((id) => id !== myUserId);
+  if (readByOther) return "read";
+  if (peerUserId && (message.deliveredTo ?? []).includes(peerUserId)) return "delivered";
+  return "sent";
+};
+
+const Chatbox = () => {
+  const router = useRouter();
+  const socket = useSocket();
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const paginationDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const onlineUsers = miscStore((state) => state.onlineUsers);
+  const me = miscStore((state) => state.me);
+  const messagesRes = miscStore((state) => state.messagesRes);
+  const setActiveChatId = miscStore((state) => state.setActiveChatId);
+
+  const [message, setMessage] = useState("");
+  const [chats, setChats] = useState<ChatResponse[]>([]);
+  const [selectedChat, setSelectedChat] = useState<ChatResponse | null>(null);
+  const [messages, setMessages] = useState<MessageResponse[]>([]);
+  const [messagesPage, setMessagesPage] = useState(1);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
+
+  const handleSendMessage = useCallback(() => {
+    if (message.trim()) {
+      socket?.emit('send-message', { text: message, chatId: selectedChat?._id });
+      setMessage("");
+    }
+  }, [message, socket, selectedChat?._id]);
+
+  const fetchChats = useCallback(async () => {
+    const [response, error] = await axiosFetch({
+      method: "GET",
+      url: API_ENDPOINTS.CHATS,
+    });
+    if (response) {
+      setChats(response);
+    }
+    if (error) {
+      Message.error(error?.response?.data?.message || "Something went wrong");
+    }
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    Cookies.remove("access");
+    socket?.disconnect();
+    router.replace("/login");
+  }, [router, socket]);
+
+  const fetchChatMessages = useCallback(async (chatId: string, page: number, append: boolean) => {
+    const [response, error] = await axiosFetch({
+      method: "GET",
+      url: API_ENDPOINTS.MESSAGES,
+      requestConfig: {
+        params: {
+          id: chatId,
+          page,
+          limit: MESSAGES_PAGE_SIZE,
+        },
+      },
+    });
+    if (error) {
+      Message.error(error?.response?.data?.message || "Something went wrong");
+      return null;
+    }
+    const incomingMessages = Array.isArray(response) ? response as MessageResponse[] : [];
+    setHasMoreMessages(incomingMessages.length === MESSAGES_PAGE_SIZE);
+
+    if (append) {
+      setMessages((prevMessages) => {
+        const existingIds = new Set(prevMessages.map((m) => m._id));
+        const uniqueIncoming = incomingMessages.filter((m) => !existingIds.has(m._id));
+        return [...prevMessages, ...uniqueIncoming];
+      });
+      setMessagesPage((prevPage) => prevPage + 1);
+      return incomingMessages;
+    }
+
+    setMessages(incomingMessages);
+    setMessagesPage(2);
+    return incomingMessages;
+  }, []);
+
+  const handleProfileClick = useCallback(async (id: string) => {
+    setSelectedChat(chats.find((chat) => chat._id === id) || null);
+    setChats((prevChats) => prevChats.map((chat) => (
+      chat._id === id ? { ...chat, unreadCount: 0 } : chat
+    )));
+    setMessages([]);
+    setMessagesPage(1);
+    setHasMoreMessages(true);
+    setIsLoadingMoreMessages(false);
+    const fetchedMessages = await fetchChatMessages(id, 1, false);
+    if (fetchedMessages && socket) {
+      const readPayloads = fetchedMessages
+        .filter(
+          (msg) =>
+            msg.senderId !== me?._id && !msg.readBy?.includes(me?._id || "")
+        )
+        .map((msg) => ({ messageId: msg._id, chatId: id }));
+      emitJoinChatThenMarkMessagesRead(socket, id, readPayloads);
+    } else if (socket) {
+      socket.emit("join-chat", id);
+    }
+  }, [socket, chats, fetchChatMessages, me?._id]);
+
+  useEffect(() => {
+    fetchChats();
+  }, []);
+
+  useEffect(() => {
+    if (contentRef.current) contentRef.current.scrollTop = 0;
+  }, [selectedChat?._id]);
+
+  useEffect(() => {
+    setActiveChatId(selectedChat?._id ?? null);
+    return () => setActiveChatId(null);
+  }, [selectedChat?._id, setActiveChatId]);
+
+  const handleMessagesScroll = useCallback(() => {
+    if (paginationDebounceTimerRef.current) {
+      clearTimeout(paginationDebounceTimerRef.current);
+    }
+
+    paginationDebounceTimerRef.current = setTimeout(async () => {
+      const container = contentRef.current;
+      if (!container || !selectedChat?._id || !hasMoreMessages || isLoadingMoreMessages) {
+        return;
+      }
+
+      const threshold = 10;
+      const maxScrollTop = Math.max(container.scrollHeight - container.clientHeight, 0);
+      const isNearZero = container.scrollTop <= threshold;
+      const isNearMax = maxScrollTop - container.scrollTop <= threshold;
+
+      // `column-reverse` can report top position differently by browser/layout direction.
+      if (!isNearZero && !isNearMax) {
+        return;
+      }
+
+      setIsLoadingMoreMessages(true);
+      try {
+        await fetchChatMessages(selectedChat._id, messagesPage, true);
+      } finally {
+        setIsLoadingMoreMessages(false);
+      }
+    }, 500);
+  }, [fetchChatMessages, hasMoreMessages, isLoadingMoreMessages, messagesPage, selectedChat?._id]);
+
+  useEffect(() => {
+    return () => {
+      if (paginationDebounceTimerRef.current) {
+        clearTimeout(paginationDebounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (messagesRes) {
+      setMessages((prevMessages) => {
+        const isEditing = prevMessages.some((m) => m._id === messagesRes._id);
+        if (isEditing) {
+          return prevMessages.map((m) => m._id === messagesRes._id ? messagesRes : m);
+        }
+        return [messagesRes, ...prevMessages];
+      });
+      fetchChats();
+    }
+  }, [messagesRes, fetchChats]);
+
+  const displayMessages = useMemo(() => {
+    return [...messages];
+  }, [messages]);
 
   return (
     <div className={styles.root}>
@@ -62,60 +237,102 @@ const Chatbox = () => {
         </div>
 
         <div className={styles.rootMessagesList}>
-          {conversations.map((item) => (
-            <RecivedProfile key={`${item.name}-${item.time}`} profile={item} />
+          {chats.map((item) => (
+            <RecivedProfile key={`${item.receiver?.name}-yesterday`} profile={item} handleProfileClick={handleProfileClick} myUserId={me?._id || ""} />
           ))}
         </div>
       </div>
-
-      <div className={styles.rootChatbox}>
-        <div className={styles.rootHeader}>
-          <div className={styles.rootHeaderProfile}>
-            <div className={styles.rootHeaderProfileDot} />
-            <div>
-              <h1>{profile.name}</h1>
-              <p>Online now</p>
+      {selectedChat && (
+        <div className={styles.rootChatbox}>
+          <div className={styles.rootHeader}>
+            <div className={styles.rootHeaderProfile}>
+              <div className={`${styles.rootHeaderProfileDot} ${onlineUsers?.includes(selectedChat?.receiver?._id || "") ? styles.rootHeaderProfileDotOnline : styles.rootHeaderProfileDotOffline}`} />
+              <div>
+                <h1>{selectedChat?.receiver?.name || ""}</h1>
+                <p>{onlineUsers?.includes(selectedChat?.receiver?._id || "") ? "Online" : "Offline"}</p>
+              </div>
+            </div>
+            <div className={styles.rootHeaderActions}>
+              <button type="button" aria-label="Voice Call">
+                Call
+              </button>
+              <button type="button" aria-label="Video Call">
+                Video
+              </button>
+              <button type="button" aria-label="Open More Options">
+                More
+              </button>
+              <button type="button" aria-label="Logout" onClick={handleLogout}>
+                Logout
+              </button>
             </div>
           </div>
-          <div className={styles.rootHeaderActions}>
-            <button type="button" aria-label="Voice Call">
-              Call
+
+          <div className={styles.rootContent} ref={contentRef} onScroll={handleMessagesScroll}>
+            {displayMessages.map((m) => {
+              const isMine = m.senderId === me?._id;
+              const peerId =
+                selectedChat.sender?._id === me?._id
+                  ? selectedChat.receiver?._id || ""
+                  : selectedChat.sender?._id || "";
+              const outgoingKind = isMine ? getOutgoingTickKind(m, me?._id || "", peerId) : null;
+              const tickClass =
+                outgoingKind === "read"
+                  ? styles.rootContentTickRead
+                  : outgoingKind === "delivered"
+                    ? styles.rootContentTickDelivered
+                    : styles.rootContentTickUnread;
+
+              return (
+                <div
+                  key={m._id}
+                  className={
+                    isMine ? styles.rootContentSent : styles.rootContentReceived
+                  }
+                >
+                  <p>{m.text}</p>
+                  <div
+                    className={`${styles.rootContentMeta} ${isMine ? styles.rootContentMeta_end : ""}`}
+                  >
+                    <span className={styles.rootContentTime}>
+                      {new Date(m.createdAt).toLocaleTimeString()}
+                    </span>
+                    {isMine && outgoingKind && (
+                      <span
+                        className={`${styles.rootContentTick} ${tickClass}`}
+                        aria-label={
+                          outgoingKind === "read"
+                            ? "Read"
+                            : outgoingKind === "delivered"
+                              ? "Delivered"
+                              : "Sent"
+                        }
+                      >
+                        {outgoingKind === "sent" ? (
+                          <Check size={14} strokeWidth={2.25} />
+                        ) : (
+                          <CheckCheck size={14} strokeWidth={2.25} />
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className={styles.rootFooter}>
+            <button type="button" aria-label="Attach File">
+              +
             </button>
-            <button type="button" aria-label="Video Call">
-              Video
-            </button>
-            <button type="button" aria-label="Open More Options">
-              More
+            <input onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} onChange={(e) => setMessage(e.target.value)} type="text" placeholder="Type a message..." value={message} />
+            <button onClick={() => handleSendMessage()} type="button" aria-label="Send Message">
+              Send
             </button>
           </div>
-        </div>
-
-        <div className={styles.rootContent}>
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={
-                message.isSent ? styles.rootContentSent : styles.rootContentReceived
-              }
-            >
-              <p>{message.text}</p>
-              <span>{message.time}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className={styles.rootFooter}>
-          <button type="button" aria-label="Attach File">
-            +
-          </button>
-          <input type="text" placeholder="Type a message..." />
-          <button type="button" aria-label="Send Message">
-            Send
-          </button>
-        </div>
-      </div>
+        </div>)}
     </div>
   );
 };
 
-export default Chatbox;
+export default memo(Chatbox);

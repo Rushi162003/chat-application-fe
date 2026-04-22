@@ -1,3 +1,5 @@
+"use client";
+
 import cx from "classnames";
 import { Familjen_Grotesk } from "next/font/google";
 import React, { memo, useEffect, useState } from "react";
