@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 //styles
 import styles from "./Chatbox.module.scss";
 import { axiosFetch } from "@/hooks/useAxios";
-import { API_ENDPOINTS } from "@/src/common/enums";
+import { API_ENDPOINTS, SOCKET_EVENTS } from "@/src/common/enums";
 import Message from "../Snackbar/message";
 import { ChatResponse, MessageResponse } from "@/src/common/api-res";
 import { miscStore } from "@/src/stores/miscStore";
@@ -21,28 +21,30 @@ const MESSAGES_PAGE_SIZE = 20;
 /** Server may process `read-message` before `join-chat` finishes; ack + fallback avoids that race. */
 const READ_AFTER_JOIN_FALLBACK_MS = 250;
 
-function emitJoinChatThenMarkMessagesRead(
+function emitJoinChatThenDeliverThenRead(
   socket: Socket,
   chatId: string,
+  deliverPayloads: { messageId: string; chatId: string }[],
   readPayloads: { messageId: string; chatId: string }[],
 ) {
-  if (readPayloads.length === 0) {
+  if (deliverPayloads.length === 0 && readPayloads.length === 0) {
     socket.emit("join-chat", chatId);
     return;
   }
 
-  let readsEmitted = false;
-  const emitReadsOnce = () => {
-    if (readsEmitted) return;
-    readsEmitted = true;
+  let sideEffectsEmitted = false;
+  const emitDeliverAndReadsOnce = () => {
+    if (sideEffectsEmitted) return;
+    sideEffectsEmitted = true;
+    deliverPayloads.forEach((p) => socket.emit(SOCKET_EVENTS.MESSAGE_DELIVERED, p));
     readPayloads.forEach((p) => socket.emit("read-message", p));
   };
 
   socket.emit("join-chat", chatId, () => {
-    emitReadsOnce();
+    emitDeliverAndReadsOnce();
   });
 
-  window.setTimeout(emitReadsOnce, READ_AFTER_JOIN_FALLBACK_MS);
+  window.setTimeout(emitDeliverAndReadsOnce, READ_AFTER_JOIN_FALLBACK_MS);
 }
 
 type OutgoingTickKind = "sent" | "delivered" | "read";
@@ -54,7 +56,12 @@ const getOutgoingTickKind = (
 ): OutgoingTickKind => {
   const readByOther = (message.readBy ?? []).some((id) => id !== myUserId);
   if (readByOther) return "read";
-  if (peerUserId && (message.deliveredTo ?? []).includes(peerUserId)) return "delivered";
+
+  const delivered = message.deliveredTo ?? [];
+  const deliveredToPeer = Boolean(peerUserId && delivered.includes(peerUserId));
+  const deliveredToSomeoneElse = delivered.some((id) => id && id !== myUserId);
+  if (deliveredToPeer || deliveredToSomeoneElse) return "delivered";
+
   return "sent";
 };
 
@@ -148,13 +155,20 @@ const Chatbox = () => {
     setIsLoadingMoreMessages(false);
     const fetchedMessages = await fetchChatMessages(id, 1, false);
     if (fetchedMessages && socket) {
+      const myId = me?._id || "";
+      const deliverPayloads = fetchedMessages
+        .filter(
+          (msg) =>
+            msg.senderId !== myId && !(msg.deliveredTo ?? []).includes(myId)
+        )
+        .map((msg) => ({ messageId: msg._id, chatId: id }));
       const readPayloads = fetchedMessages
         .filter(
           (msg) =>
-            msg.senderId !== me?._id && !msg.readBy?.includes(me?._id || "")
+            msg.senderId !== myId && !msg.readBy?.includes(myId)
         )
         .map((msg) => ({ messageId: msg._id, chatId: id }));
-      emitJoinChatThenMarkMessagesRead(socket, id, readPayloads);
+      emitJoinChatThenDeliverThenRead(socket, id, deliverPayloads, readPayloads);
     } else if (socket) {
       socket.emit("join-chat", id);
     }
@@ -196,12 +210,23 @@ const Chatbox = () => {
 
       setIsLoadingMoreMessages(true);
       try {
-        await fetchChatMessages(selectedChat._id, messagesPage, true);
+        const page = await fetchChatMessages(selectedChat._id, messagesPage, true);
+        const myId = me?._id;
+        if (page?.length && socket && myId) {
+          page.forEach((msg) => {
+            if (msg.senderId !== myId && !(msg.deliveredTo ?? []).includes(myId)) {
+              socket.emit(SOCKET_EVENTS.MESSAGE_DELIVERED, {
+                messageId: msg._id,
+                chatId: selectedChat._id,
+              });
+            }
+          });
+        }
       } finally {
         setIsLoadingMoreMessages(false);
       }
     }, 500);
-  }, [fetchChatMessages, hasMoreMessages, isLoadingMoreMessages, messagesPage, selectedChat?._id]);
+  }, [fetchChatMessages, hasMoreMessages, isLoadingMoreMessages, messagesPage, selectedChat?._id, me?._id, socket]);
 
   useEffect(() => {
     return () => {
@@ -212,17 +237,26 @@ const Chatbox = () => {
   }, []);
 
   useEffect(() => {
-    if (messagesRes) {
+    if (messagesRes && selectedChat?._id === messagesRes.chatId) {
       setMessages((prevMessages) => {
         const isEditing = prevMessages.some((m) => m._id === messagesRes._id);
         if (isEditing) {
-          return prevMessages.map((m) => m._id === messagesRes._id ? messagesRes : m);
+          return prevMessages.map((m) => {
+            if (m._id !== messagesRes._id) return m;
+            return {
+              ...m,
+              ...messagesRes,
+              readBy: messagesRes.readBy !== undefined ? messagesRes.readBy : m.readBy,
+              deliveredTo:
+                messagesRes.deliveredTo !== undefined ? messagesRes.deliveredTo : m.deliveredTo,
+            };
+          });
         }
         return [messagesRes, ...prevMessages];
       });
-      fetchChats();
     }
-  }, [messagesRes, fetchChats]);
+    if (messagesRes) fetchChats();
+  }, [messagesRes, fetchChats, selectedChat?._id]);
 
   const displayMessages = useMemo(() => {
     return [...messages];
@@ -276,6 +310,7 @@ const Chatbox = () => {
                   ? selectedChat.receiver?._id || ""
                   : selectedChat.sender?._id || "";
               const outgoingKind = isMine ? getOutgoingTickKind(m, me?._id || "", peerId) : null;
+              console.log("outgoingKind===============", m.text, outgoingKind);
               const tickClass =
                 outgoingKind === "read"
                   ? styles.rootContentTickRead

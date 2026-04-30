@@ -5,6 +5,7 @@ import { io, Socket } from "socket.io-client";
 import Cookies from "js-cookie";
 import { miscStore } from "@/src/stores/miscStore";
 import { MessageResponse } from "@/src/common/api-res";
+import { SOCKET_EVENTS } from "@/src/common/enums";
 
 type MessageReceiptPayload = {
   type: "read" | "delivered";
@@ -43,6 +44,16 @@ export const useSocket = () => {
 
       const { activeChatId, me } = miscStore.getState();
       const myId = me?._id;
+      if (
+        myId &&
+        message.senderId !== myId &&
+        !(message.deliveredTo ?? []).includes(myId)
+      ) {
+        socketRef.current?.emit(SOCKET_EVENTS.MESSAGE_DELIVERED, {
+          messageId: message._id,
+          chatId: message.chatId,
+        });
+      }
       const isOpenChat = Boolean(activeChatId && message.chatId === activeChatId);
       const isIncoming = myId && message.senderId !== myId;
       const notYetReadByMe = myId && !message.readBy?.includes(myId);

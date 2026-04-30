@@ -20,3 +20,8 @@ export enum PAGES {
     HOME = "/home",
     CHATBOX = "/chatbox",
 }
+
+/** Socket.io event names — keep in sync with your backend */
+export enum SOCKET_EVENTS {
+    MESSAGE_DELIVERED = "message-delivered",
+}
