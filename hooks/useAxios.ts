@@ -45,7 +45,6 @@ export const axiosFetch = async ({
     url,
     requestConfig
 }: UseAxiosOptions) => {
-    // console.log("nnnnnnn");
     let response;
     let error;
     const user_id: string | number | undefined = undefined;
@@ -61,7 +60,6 @@ export const axiosFetch = async ({
 
     try {
         const res = await axiosInstance.request(config);
-        // console.log("Response from axiosFetch:=================", res);
 
         response = res.data;
     } catch (err) {
@@ -74,7 +72,6 @@ export const axiosFetch = async ({
                         Authorization: `Bearer ${accessToken}`
                     }
                 };
-                // console.log("nnnnnn")
                 const res = await axiosInstance.request(newRequestConfig);
                 response = res.data;
             } catch (e) {

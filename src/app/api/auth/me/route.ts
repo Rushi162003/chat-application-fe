@@ -6,7 +6,6 @@ export async function GET(request: Request) {
     const base = process.env.NEXT_PUBLIC_BE_API_URL ?? "";
     const url = `${base}${BE_API_ENDPOINTS.ME}`;
     try {
-        console.log("url", request.headers.get("Authorization"));
         const me = await axios.get(url, {
             headers: {
                 Authorization: `${request.headers.get("Authorization")}`,

@@ -23,3 +23,22 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
+
+export async function POST(request: Request) {
+    const base = process.env.NEXT_PUBLIC_BE_API_URL ?? "";
+    const url = `${base}${BE_API_ENDPOINTS.CHATS}`;
+    try {
+        const payload = await request.json();
+        const chat = await axios.post(url, payload, {
+            headers: {
+                Authorization: `${request.headers.get("Authorization")}`,
+            },
+        });
+        return NextResponse.json(chat?.data || {});
+    } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+            return NextResponse.json(error.response.data, { status: error.response.status });
+        }
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+}

@@ -11,7 +11,7 @@ import styles from "./Chatbox.module.scss";
 import { axiosFetch } from "@/hooks/useAxios";
 import { API_ENDPOINTS, SOCKET_EVENTS } from "@/src/common/enums";
 import Message from "../Snackbar/message";
-import { ChatResponse, MessageResponse } from "@/src/common/api-res";
+import { ChatResponse, MessageResponse, User } from "@/src/common/api-res";
 import { miscStore } from "@/src/stores/miscStore";
 import { Check, CheckCheck } from "lucide-react";
 import type { Socket } from "socket.io-client";
@@ -83,6 +83,11 @@ const Chatbox = () => {
   const [messagesPage, setMessagesPage] = useState(1);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
+  const [showNewChatModal, setShowNewChatModal] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isUsersLoading, setIsUsersLoading] = useState(false);
+  const [isStartingChat, setIsStartingChat] = useState(false);
+  const [searchUserEmail, setSearchUserEmail] = useState("");
 
   const handleSendMessage = useCallback(() => {
     if (message.trim()) {
@@ -98,11 +103,66 @@ const Chatbox = () => {
     });
     if (response) {
       setChats(response);
+      return response as ChatResponse[];
     }
     if (error) {
       Message.error(error?.response?.data?.message || "Something went wrong");
     }
+    return [] as ChatResponse[];
   }, []);
+
+  const fetchUsers = useCallback(async (email: string) => {
+    setIsUsersLoading(true);
+    const [response, error] = await axiosFetch({
+      method: "GET",
+      url: API_ENDPOINTS.USERS,
+      requestConfig: {
+        params: {
+          search: email,
+        },
+      },
+    });
+    setIsUsersLoading(false);
+    if (response) {
+      const incomingUsers = (response as User[]).filter((u) => u._id !== me?._id);
+      setUsers(incomingUsers);
+      return;
+    }
+    if (error) {
+      Message.error(error?.response?.data?.message || "Something went wrong");
+    }
+  }, [me?._id, searchUserEmail]);
+
+  const handleOpenNewChatModal = useCallback(async () => {
+    setSearchUserEmail("");
+    setShowNewChatModal(true);
+    // await fetchUsers();
+  }, []);
+
+  const debounce = (func: (email: string) => void, delay: number) => {
+    let timeout: NodeJS.Timeout;
+    return (email: string) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(email), delay);
+    };
+  };
+
+  const debouncedFetchUsers = useCallback(debounce((email: string) => fetchUsers(email), 1000), []);
+
+  const handleSearchUser = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchUserEmail(e.target.value);
+    if (e.target.value.trim() === "") {
+      setUsers([]);
+      return;
+    }
+    debouncedFetchUsers(e.target.value.trim());
+  }, [debouncedFetchUsers]);
+
+  // const filteredUsers = useMemo(() => {
+  //   const normalizedQuery = searchUserEmail.trim().toLowerCase();
+  //   if (!normalizedQuery) return users;
+  //   return users.filter((user) => user.email?.toLowerCase().includes(normalizedQuery));
+  // }, [users, searchUserEmail]);
 
   const handleLogout = useCallback(() => {
     Cookies.remove("access");
@@ -173,6 +233,42 @@ const Chatbox = () => {
       socket.emit("join-chat", id);
     }
   }, [socket, chats, fetchChatMessages, me?._id]);
+
+  const handleStartNewChat = useCallback(async (userId: string) => {
+    setIsStartingChat(true);
+    const [response, error] = await axiosFetch({
+      method: "POST",
+      url: API_ENDPOINTS.CHATS,
+      requestConfig: {
+        data: {
+          type: "direct",
+          participants: [me?._id, userId]
+        },
+      },
+    });
+    setIsStartingChat(false);
+    if (error) {
+      Message.error(error?.response?.data?.message || "Unable to start chat");
+      return;
+    }
+
+    const refreshedChats = await fetchChats();
+    const createdChatId =
+      (response as { _id?: string; chatId?: string; chat?: { _id?: string } } | null)?._id ||
+      (response as { _id?: string; chatId?: string; chat?: { _id?: string } } | null)?.chatId ||
+      (response as { _id?: string; chatId?: string; chat?: { _id?: string } } | null)?.chat?._id;
+
+    const targetChat =
+      refreshedChats.find((c) => c._id === createdChatId) ||
+      refreshedChats.find((c) => c.receiver?._id === userId || c.sender?._id === userId);
+
+    if (targetChat?._id) {
+      setShowNewChatModal(false);
+      await handleProfileClick(targetChat._id);
+      return;
+    }
+    Message.error("Chat created, but could not open it automatically.");
+  }, [fetchChats, handleProfileClick, me?._id]);
 
   useEffect(() => {
     fetchChats();
@@ -267,7 +363,7 @@ const Chatbox = () => {
       <div className={styles.rootMessages}>
         <div className={styles.rootMessagesHeader}>
           <h2>Messages</h2>
-          <button type="button">New Chat</button>
+          <button type="button" onClick={handleOpenNewChatModal}>New Chat</button>
         </div>
 
         <div className={styles.rootMessagesList}>
@@ -310,7 +406,6 @@ const Chatbox = () => {
                   ? selectedChat.receiver?._id || ""
                   : selectedChat.sender?._id || "";
               const outgoingKind = isMine ? getOutgoingTickKind(m, me?._id || "", peerId) : null;
-              console.log("outgoingKind===============", m.text, outgoingKind);
               const tickClass =
                 outgoingKind === "read"
                   ? styles.rootContentTickRead
@@ -366,6 +461,51 @@ const Chatbox = () => {
             </button>
           </div>
         </div>)}
+      {showNewChatModal && (
+        <div className={styles.newChatOverlay} onClick={() => !isStartingChat && setShowNewChatModal(false)}>
+          <div className={styles.newChatModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.newChatHeader}>
+              <h3>Start New Chat</h3>
+              <button type="button" onClick={() => setShowNewChatModal(false)} disabled={isStartingChat}>Close</button>
+            </div>
+            <div className={styles.newChatSearch}>
+              <input
+                type="email"
+                placeholder="Search user by email"
+                value={searchUserEmail}
+                disabled={isUsersLoading || isStartingChat}
+                onChange={(e) => {
+                  // setSearchUserEmail(e.target.value);
+                  handleSearchUser(e);
+                }}
+              />
+              {isUsersLoading && <p className={styles.newChatSearchLoading}>Searching users...</p>}
+            </div>
+            <div className={styles.newChatList}>
+              {isUsersLoading && (
+                <div className={styles.newChatLoadingList}>
+                  {[1, 2, 3].map((item) => (
+                    <div key={item} className={styles.newChatLoadingItem} />
+                  ))}
+                </div>
+              )}
+              {!isUsersLoading && users.length === 0 && <p className={styles.newChatEmpty}>No user found.</p>}
+              {!isUsersLoading && users.map((user) => (
+                <button
+                  key={user._id}
+                  type="button"
+                  className={styles.newChatUser}
+                  onClick={() => handleStartNewChat(user._id)}
+                  disabled={isStartingChat || isUsersLoading}
+                >
+                  <span>{user.name}</span>
+                  <small>{user.email}</small>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

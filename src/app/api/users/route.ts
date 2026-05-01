@@ -5,10 +5,11 @@ import axios from "axios";
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
+    const search = searchParams.get("search");
     const base = process.env.NEXT_PUBLIC_BE_API_URL ?? "";
     const url = id
         ? `${base}${BE_API_ENDPOINTS.USERS}?id=${encodeURIComponent(id)}`
-        : `${base}${BE_API_ENDPOINTS.USERS}`;
+        : `${base}${BE_API_ENDPOINTS.USERS}?search=${encodeURIComponent(search ?? "")}`;
     try {
         const users = await axios.get(url, {
             headers: {

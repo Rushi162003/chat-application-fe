@@ -262,3 +262,134 @@
     }
   }
 }
+
+.newChatOverlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, #000000 55%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.newChatModal {
+  width: min(480px, calc(100vw - 2rem));
+  max-height: min(560px, calc(100vh - 2rem));
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+  background: color-mix(in srgb, var(--background) 95%, #121212);
+  overflow: hidden;
+}
+
+.newChatHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.8rem 0.9rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  button {
+    border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+    background: color-mix(in srgb, var(--foreground) 8%, transparent);
+    color: inherit;
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+  }
+}
+
+.newChatList {
+  overflow-y: auto;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.newChatSearch {
+  padding: 0.6rem 0.75rem 0.2rem;
+
+  input {
+    width: 100%;
+    border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+    background: color-mix(in srgb, var(--foreground) 4%, transparent);
+    color: inherit;
+    border-radius: 0.6rem;
+    padding: 0.55rem 0.65rem;
+    outline: none;
+  }
+}
+
+.newChatSearchLoading {
+  margin: 0.35rem 0 0;
+  font-size: 0.76rem;
+  color: color-mix(in srgb, var(--foreground) 65%, transparent);
+}
+
+.newChatLoadingList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.newChatLoadingItem {
+  height: 52px;
+  border-radius: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--foreground) 4%, transparent) 25%,
+    color-mix(in srgb, var(--foreground) 9%, transparent) 50%,
+    color-mix(in srgb, var(--foreground) 4%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: newChatPulse 1.1s linear infinite;
+}
+
+@keyframes newChatPulse {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.newChatEmpty {
+  margin: 0.35rem 0;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--foreground) 65%, transparent);
+}
+
+.newChatUser {
+  width: 100%;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  color: inherit;
+  border-radius: 0.7rem;
+  padding: 0.6rem 0.7rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+
+  span {
+    font-size: 0.93rem;
+    font-weight: 600;
+  }
+
+  small {
+    font-size: 0.75rem;
+    color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  }
+}
