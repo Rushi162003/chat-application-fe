@@ -65,6 +65,16 @@ const getOutgoingTickKind = (
   return "sent";
 };
 
+const getInitials = (value?: string) => {
+  if (!value) return "U";
+  return value
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+};
+
 const Chatbox = () => {
   const router = useRouter();
   const socket = useSocket();
@@ -361,8 +371,21 @@ const Chatbox = () => {
   return (
     <div className={styles.root}>
       <div className={styles.rootMessages}>
+        <div className={styles.rootMessagesMeCard}>
+          <div className={styles.rootMessagesMeCardAvatar}>{getInitials(me?.name)}</div>
+          <div className={styles.rootMessagesMeCardInfo}>
+            <h3>{me?.name || "User"}</h3>
+            <p>{me?.email || "No email"}</p>
+          </div>
+          <button type="button" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
         <div className={styles.rootMessagesHeader}>
-          <h2>Messages</h2>
+          <div>
+            <h2>Messages</h2>
+            <p>Start or continue your conversations</p>
+          </div>
           <button type="button" onClick={handleOpenNewChatModal}>New Chat</button>
         </div>
 
@@ -372,8 +395,9 @@ const Chatbox = () => {
           ))}
         </div>
       </div>
-      {selectedChat && (
-        <div className={styles.rootChatbox}>
+      <div className={styles.rootChatbox}>
+        {selectedChat ? (
+          <>
           <div className={styles.rootHeader}>
             <div className={styles.rootHeaderProfile}>
               <div className={`${styles.rootHeaderProfileDot} ${onlineUsers?.includes(selectedChat?.receiver?._id || "") ? styles.rootHeaderProfileDotOnline : styles.rootHeaderProfileDotOffline}`} />
@@ -391,9 +415,6 @@ const Chatbox = () => {
               </button>
               <button type="button" aria-label="Open More Options">
                 More
-              </button>
-              <button type="button" aria-label="Logout" onClick={handleLogout}>
-                Logout
               </button>
             </div>
           </div>
@@ -460,7 +481,18 @@ const Chatbox = () => {
               Send
             </button>
           </div>
-        </div>)}
+          </>
+        ) : (
+          <div className={styles.rootEmptyState}>
+            <div className={styles.rootEmptyStateBadge}>{getInitials(me?.name)}</div>
+            <h2>Welcome, {me?.name || "there"}!</h2>
+            <p>Select a chat from the sidebar or click <strong>New Chat</strong> to start a conversation.</p>
+            <button type="button" onClick={handleOpenNewChatModal}>
+              Start New Chat
+            </button>
+          </div>
+        )}
+      </div>
       {showNewChatModal && (
         <div className={styles.newChatOverlay} onClick={() => !isStartingChat && setShowNewChatModal(false)}>
           <div className={styles.newChatModal} onClick={(e) => e.stopPropagation()}>
