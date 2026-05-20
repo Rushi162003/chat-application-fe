@@ -15,6 +15,8 @@ interface MiscStore {
     setActiveChatId: (chatId: string | null) => void;
     messagesRes: MessageResponse | null;
     setMessagesRes: (messages: MessageResponse | null) => void;
+    deletedMessageEvent: { messageId: string; chatId: string } | null;
+    setDeletedMessageEvent: (event: { messageId: string; chatId: string } | null) => void;
 }
 
 export const miscStore = create<MiscStore>((set) => ({
@@ -37,6 +39,8 @@ export const miscStore = create<MiscStore>((set) => ({
                 messagesRes._id === prev._id &&
                 messagesRes.__v === prev.__v &&
                 messagesRes.updatedAt === prev.updatedAt &&
+                messagesRes.text === prev.text &&
+                messagesRes.isEdited === prev.isEdited &&
                 JSON.stringify(messagesRes.readBy) === JSON.stringify(prev.readBy) &&
                 JSON.stringify(messagesRes.deliveredTo) === JSON.stringify(prev.deliveredTo)
             ) {
@@ -44,7 +48,9 @@ export const miscStore = create<MiscStore>((set) => ({
             }
             return { messagesRes };
         }),
-    }));
+    deletedMessageEvent: null,
+    setDeletedMessageEvent: (deletedMessageEvent: { messageId: string; chatId: string } | null) => set({ deletedMessageEvent }),
+}));
 
 export const useMiscStore = () => {
     return useStore(miscStore);

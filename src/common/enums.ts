@@ -18,10 +18,14 @@ export enum BE_API_ENDPOINTS {
 export enum PAGES {
     LOGIN = "/login",
     HOME = "/home",
-    CHATBOX = "/chatbox",
+    CHATBOX = "/chatbox",   
 }
 
 /** Socket.io event names — keep in sync with your backend */
 export enum SOCKET_EVENTS {
     MESSAGE_DELIVERED = "message-delivered",
+    EDIT_MESSAGE = "edit-message",
+    DELETE_MESSAGE = "delete-message",
+    MESSAGE_EDITED = "message-edited",
+    MESSAGE_DELETED = "message-deleted",
 }

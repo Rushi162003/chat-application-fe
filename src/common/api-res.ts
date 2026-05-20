@@ -40,4 +40,5 @@ export interface MessageResponse {
     createdAt: Date;
     updatedAt: Date;
     __v: number;
+    isEdited?: boolean;
 }

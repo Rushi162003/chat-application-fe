@@ -89,6 +89,22 @@ export const useSocket = () => {
       }
     });
 
+    socketRef.current.on(SOCKET_EVENTS.MESSAGE_EDITED, (message: MessageResponse) => {
+      setMessagesRes(message);
+    });
+
+    socketRef.current.on(
+      SOCKET_EVENTS.MESSAGE_DELETED,
+      (payload: { messageId: string; chatId: string }) => {
+        console.log('payload message deleted', payload);
+        if (payload?.messageId && payload?.chatId) {
+          console.log('payload message deleted set messages res nulls');
+          setMessagesRes(null);
+          miscStore.getState().setDeletedMessageEvent(payload);
+        }
+      }
+    );
+
     return () => {
       socketRef.current?.disconnect();
       socketRef.current = null;

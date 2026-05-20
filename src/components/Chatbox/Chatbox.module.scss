@@ -272,20 +272,25 @@
     flex-direction: column-reverse;
     gap: 0.75rem;
     overflow-y: auto;
+    overflow-x: hidden;
     margin: 1rem 0 0.85rem;
-    padding-right: 0.3rem;
+    padding: 0 0.3rem 0.5rem 0;
     @include customScrollbar;
 
     &Received,
     &Sent {
-      padding: 0.6rem 0.8rem;
+      position: relative;
+      padding: 0.55rem 0.75rem 0.6rem;
       border-radius: 0.8rem;
       max-width: min(75%, 520px);
       border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+      overflow: visible;
 
-      p {
+      p,
+      &Text {
         margin: 0;
         line-height: 1.4;
+        word-break: break-word;
       }
 
       > span {
@@ -341,6 +346,85 @@
     &Sent {
       align-self: flex-end;
       background: color-mix(in srgb, #7860ff 18%, transparent);
+      padding-top: 0.4rem;
+    }
+
+    &Toolbar {
+      position: relative;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      min-height: 22px;
+      margin-bottom: 0.3rem;
+    }
+
+    &Editing {
+      border-color: color-mix(in srgb, #7860ff 45%, transparent);
+      box-shadow: 0 0 0 2px color-mix(in srgb, #7860ff 18%, transparent);
+    }
+
+    &ActionsTrigger {
+      border: none;
+      background: color-mix(in srgb, var(--background) 55%, transparent);
+      color: inherit;
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0.85;
+      flex-shrink: 0;
+    }
+
+    &ActionsMenu {
+      position: absolute;
+      top: calc(100% + 0.3rem);
+      right: 0;
+      min-width: 128px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      padding: 0.35rem;
+      border-radius: 0.65rem;
+      border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+      background: color-mix(in srgb, var(--background) 96%, #121212);
+      box-shadow: 0 10px 24px color-mix(in srgb, #000000 28%, transparent);
+      z-index: 20;
+
+      &Up {
+        top: auto;
+        bottom: calc(100% + 0.3rem);
+      }
+
+        button {
+          border: none;
+          background: transparent;
+          color: inherit;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.4rem 0.45rem;
+          border-radius: 0.45rem;
+          font-size: 0.78rem;
+          cursor: pointer;
+          text-align: left;
+
+          &:hover {
+            background: color-mix(in srgb, var(--foreground) 8%, transparent);
+          }
+
+          &:last-child {
+            color: #ff6b7d;
+          }
+        }
+    }
+
+    &Edited {
+      font-size: 0.68rem;
+      font-style: italic;
+      color: color-mix(in srgb, var(--foreground) 62%, transparent);
     }
   }
 
@@ -348,6 +432,11 @@
     flex-shrink: 0;
     display: flex;
     gap: 0.5rem;
+
+    &Editing {
+      border-color: color-mix(in srgb, #7860ff 35%, transparent);
+      background: color-mix(in srgb, #7860ff 8%, transparent);
+    }
     border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
     border-radius: 999px;
     padding: 0.4rem;

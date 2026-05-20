@@ -13,7 +13,7 @@ import { API_ENDPOINTS, SOCKET_EVENTS } from "@/src/common/enums";
 import Message from "../Snackbar/message";
 import { ChatResponse, MessageResponse, User } from "@/src/common/api-res";
 import { miscStore } from "@/src/stores/miscStore";
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import type { Socket } from "socket.io-client";
 
 const MESSAGES_PAGE_SIZE = 20;
@@ -85,6 +85,8 @@ const Chatbox = () => {
   const me = miscStore((state) => state.me);
   const messagesRes = miscStore((state) => state.messagesRes);
   const setActiveChatId = miscStore((state) => state.setActiveChatId);
+  const deletedMessageEvent = miscStore((state) => state.deletedMessageEvent);
+  const setDeletedMessageEvent = miscStore((state) => state.setDeletedMessageEvent);
 
   const [message, setMessage] = useState("");
   const [chats, setChats] = useState<ChatResponse[]>([]);
@@ -98,6 +100,9 @@ const Chatbox = () => {
   const [isUsersLoading, setIsUsersLoading] = useState(false);
   const [isStartingChat, setIsStartingChat] = useState(false);
   const [searchUserEmail, setSearchUserEmail] = useState("");
+  const [activeMessageMenuId, setActiveMessageMenuId] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingMessageText, setEditingMessageText] = useState("");
 
   const handleSendMessage = useCallback(() => {
     if (message.trim()) {
@@ -120,6 +125,56 @@ const Chatbox = () => {
     }
     return [] as ChatResponse[];
   }, []);
+
+  const handleStartEditMessage = useCallback((msg: MessageResponse) => {
+    setEditingMessageId(msg._id);
+    setEditingMessageText(msg.text);
+    setActiveMessageMenuId(null);
+    setMessage("");
+  }, []);
+
+  const handleCancelEditMessage = useCallback(() => {
+    setEditingMessageId(null);
+    setEditingMessageText("");
+  }, []);
+
+  const handleSaveEditMessage = useCallback(() => {
+    const trimmed = editingMessageText.trim();
+    if (!trimmed || !editingMessageId || !selectedChat?._id || !socket) return;
+
+    socket.emit(SOCKET_EVENTS.EDIT_MESSAGE, {
+      messageId: editingMessageId,
+      chatId: selectedChat._id,
+      text: trimmed,
+    });
+
+    setMessages((prev) =>
+      prev.map((m) =>
+        m._id === editingMessageId ? { ...m, text: trimmed, isEdited: true } : m
+      )
+    );
+    handleCancelEditMessage();
+    fetchChats();
+  }, [editingMessageId, editingMessageText, selectedChat?._id, socket, handleCancelEditMessage, fetchChats]);
+
+  const handleDeleteMessage = useCallback(
+    (msg: MessageResponse) => {
+      if (!selectedChat?._id || !socket) return;
+      const confirmed = window.confirm("Delete this message?");
+      if (!confirmed) return;
+
+      socket.emit(SOCKET_EVENTS.DELETE_MESSAGE, {
+        messageId: msg._id,
+        chatId: selectedChat._id,
+      });
+
+      setMessages((prev) => prev.filter((m) => m._id !== msg._id));
+      setActiveMessageMenuId(null);
+      if (editingMessageId === msg._id) handleCancelEditMessage();
+      fetchChats();
+    },
+    [selectedChat?._id, socket, editingMessageId, handleCancelEditMessage, fetchChats]
+  );
 
   const fetchUsers = useCallback(async (email: string) => {
     setIsUsersLoading(true);
@@ -215,6 +270,8 @@ const Chatbox = () => {
   }, []);
 
   const handleProfileClick = useCallback(async (id: string) => {
+    setActiveMessageMenuId(null);
+    handleCancelEditMessage();
     setSelectedChat(chats.find((chat) => chat._id === id) || null);
     setChats((prevChats) => prevChats.map((chat) => (
       chat._id === id ? { ...chat, unreadCount: 0 } : chat
@@ -242,7 +299,7 @@ const Chatbox = () => {
     } else if (socket) {
       socket.emit("join-chat", id);
     }
-  }, [socket, chats, fetchChatMessages, me?._id]);
+  }, [socket, chats, fetchChatMessages, me?._id, handleCancelEditMessage]);
 
   const handleStartNewChat = useCallback(async (userId: string) => {
     setIsStartingChat(true);
@@ -343,6 +400,24 @@ const Chatbox = () => {
   }, []);
 
   useEffect(() => {
+    if (!deletedMessageEvent) return;
+    if (deletedMessageEvent.chatId === selectedChat?._id) {
+      setMessages((prev) => prev.filter((m) => m._id !== deletedMessageEvent.messageId));
+      if (editingMessageId === deletedMessageEvent.messageId) {
+        handleCancelEditMessage();
+      }
+      fetchChats();
+    }
+    setDeletedMessageEvent(null);
+  }, [deletedMessageEvent, selectedChat?._id, editingMessageId, handleCancelEditMessage, fetchChats, setDeletedMessageEvent]);
+
+  useEffect(() => {
+    const closeMenu = () => setActiveMessageMenuId(null);
+    window.addEventListener("click", closeMenu);
+    return () => window.removeEventListener("click", closeMenu);
+  }, []);
+
+  useEffect(() => {
     if (messagesRes && selectedChat?._id === messagesRes.chatId) {
       setMessages((prevMessages) => {
         const isEditing = prevMessages.some((m) => m._id === messagesRes._id);
@@ -355,6 +430,7 @@ const Chatbox = () => {
               readBy: messagesRes.readBy !== undefined ? messagesRes.readBy : m.readBy,
               deliveredTo:
                 messagesRes.deliveredTo !== undefined ? messagesRes.deliveredTo : m.deliveredTo,
+              isEdited: messagesRes.isEdited ?? m.isEdited,
             };
           });
         }
@@ -365,6 +441,7 @@ const Chatbox = () => {
   }, [messagesRes, fetchChats, selectedChat?._id]);
 
   const displayMessages = useMemo(() => {
+    console.log('messages', messages);
     return [...messages];
   }, [messages]);
 
@@ -398,89 +475,142 @@ const Chatbox = () => {
       <div className={styles.rootChatbox}>
         {selectedChat ? (
           <>
-          <div className={styles.rootHeader}>
-            <div className={styles.rootHeaderProfile}>
-              <div className={`${styles.rootHeaderProfileDot} ${onlineUsers?.includes(selectedChat?.receiver?._id || "") ? styles.rootHeaderProfileDotOnline : styles.rootHeaderProfileDotOffline}`} />
-              <div>
-                <h1>{selectedChat?.receiver?.name || ""}</h1>
-                <p>{onlineUsers?.includes(selectedChat?.receiver?._id || "") ? "Online" : "Offline"}</p>
+            <div className={styles.rootHeader}>
+              <div className={styles.rootHeaderProfile}>
+                <div className={`${styles.rootHeaderProfileDot} ${onlineUsers?.includes(selectedChat?.receiver?._id || "") ? styles.rootHeaderProfileDotOnline : styles.rootHeaderProfileDotOffline}`} />
+                <div>
+                  <h1>{selectedChat?.receiver?.name || ""}</h1>
+                  <p>{onlineUsers?.includes(selectedChat?.receiver?._id || "") ? "Online" : "Offline"}</p>
+                </div>
+              </div>
+              <div className={styles.rootHeaderActions}>
+                <button type="button" aria-label="Voice Call">
+                  Call
+                </button>
+                <button type="button" aria-label="Video Call">
+                  Video
+                </button>
+                <button type="button" aria-label="Open More Options">
+                  More
+                </button>
               </div>
             </div>
-            <div className={styles.rootHeaderActions}>
-              <button type="button" aria-label="Voice Call">
-                Call
-              </button>
-              <button type="button" aria-label="Video Call">
-                Video
-              </button>
-              <button type="button" aria-label="Open More Options">
-                More
-              </button>
-            </div>
-          </div>
 
-          <div className={styles.rootContent} ref={contentRef} onScroll={handleMessagesScroll}>
-            {displayMessages.map((m) => {
-              const isMine = m.senderId === me?._id;
-              const peerId =
-                selectedChat.sender?._id === me?._id
-                  ? selectedChat.receiver?._id || ""
-                  : selectedChat.sender?._id || "";
-              const outgoingKind = isMine ? getOutgoingTickKind(m, me?._id || "", peerId) : null;
-              const tickClass =
-                outgoingKind === "read"
-                  ? styles.rootContentTickRead
-                  : outgoingKind === "delivered"
-                    ? styles.rootContentTickDelivered
-                    : styles.rootContentTickUnread;
+            <div className={styles.rootContent} ref={contentRef} onScroll={handleMessagesScroll}>
+              {displayMessages.map((m, index) => {
+                const isMine = m.senderId === me?._id;
+                const isNewestMessage = index === 0;
+                const peerId =
+                  selectedChat.sender?._id === me?._id
+                    ? selectedChat.receiver?._id || ""
+                    : selectedChat.sender?._id || "";
+                const outgoingKind = isMine ? getOutgoingTickKind(m, me?._id || "", peerId) : null;
+                const tickClass =
+                  outgoingKind === "read"
+                    ? styles.rootContentTickRead
+                    : outgoingKind === "delivered"
+                      ? styles.rootContentTickDelivered
+                      : styles.rootContentTickUnread;
 
-              return (
-                <div
-                  key={m._id}
-                  className={
-                    isMine ? styles.rootContentSent : styles.rootContentReceived
-                  }
-                >
-                  <p>{m.text}</p>
+                return (
                   <div
-                    className={`${styles.rootContentMeta} ${isMine ? styles.rootContentMeta_end : ""}`}
+                    key={m._id}
+                    className={`${isMine ? styles.rootContentSent : styles.rootContentReceived} ${editingMessageId === m._id ? styles.rootContentEditing : ""}`}
                   >
-                    <span className={styles.rootContentTime}>
-                      {new Date(m.createdAt).toLocaleTimeString()}
-                    </span>
-                    {isMine && outgoingKind && (
-                      <span
-                        className={`${styles.rootContentTick} ${tickClass}`}
-                        aria-label={
-                          outgoingKind === "read"
-                            ? "Read"
-                            : outgoingKind === "delivered"
-                              ? "Delivered"
-                              : "Sent"
-                        }
-                      >
-                        {outgoingKind === "sent" ? (
-                          <Check size={14} strokeWidth={2.25} />
-                        ) : (
-                          <CheckCheck size={14} strokeWidth={2.25} />
+                    {isMine && (
+                      <div className={styles.rootContentToolbar}>
+                        <button
+                          type="button"
+                          className={styles.rootContentActionsTrigger}
+                          aria-label="Message options"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMessageMenuId((prev) => (prev === m._id ? null : m._id));
+                          }}
+                        >
+                          <MoreVertical size={14} />
+                        </button>
+                        {activeMessageMenuId === m._id && (
+                          <div
+                            className={`${styles.rootContentActionsMenu} ${isNewestMessage ? styles.rootContentActionsMenuUp : ""}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button type="button" onClick={() => handleStartEditMessage(m)}>
+                              <Pencil size={14} />
+                              Edit
+                            </button>
+                            <button type="button" onClick={() => handleDeleteMessage(m)}>
+                              <Trash2 size={14} />
+                              Delete
+                            </button>
+                          </div>
                         )}
-                      </span>
+                      </div>
                     )}
+                    <p className={styles.rootContentText}>{m.text}</p>
+                    <div
+                      className={`${styles.rootContentMeta} ${isMine ? styles.rootContentMeta_end : ""}`}
+                    >
+                      {m.isEdited && <span className={styles.rootContentEdited}>edited</span>}
+                      <span className={styles.rootContentTime}>
+                        {new Date(m.createdAt).toLocaleTimeString()}
+                      </span>
+                      {isMine && outgoingKind && (
+                        <span
+                          className={`${styles.rootContentTick} ${tickClass}`}
+                          aria-label={
+                            outgoingKind === "read"
+                              ? "Read"
+                              : outgoingKind === "delivered"
+                                ? "Delivered"
+                                : "Sent"
+                          }
+                        >
+                          {outgoingKind === "sent" ? (
+                            <Check size={14} strokeWidth={2.25} />
+                          ) : (
+                            <CheckCheck size={14} strokeWidth={2.25} />
+                          )}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
 
-          <div className={styles.rootFooter}>
-            <button type="button" aria-label="Attach File">
-              +
-            </button>
-            <input onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} onChange={(e) => setMessage(e.target.value)} type="text" placeholder="Type a message..." value={message} />
-            <button onClick={() => handleSendMessage()} type="button" aria-label="Send Message">
-              Send
-            </button>
-          </div>
+            <div className={`${styles.rootFooter} ${editingMessageId ? styles.rootFooterEditing : ""}`}>
+              {editingMessageId ? (
+                <>
+                  <input
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveEditMessage();
+                      if (e.key === "Escape") handleCancelEditMessage();
+                    }}
+                    onChange={(e) => setEditingMessageText(e.target.value)}
+                    type="text"
+                    placeholder="Edit message..."
+                    value={editingMessageText}
+                  />
+                  <button type="button" onClick={handleCancelEditMessage}>
+                    Cancel
+                  </button>
+                  <button type="button" onClick={handleSaveEditMessage} aria-label="Save edited message">
+                    Save
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" aria-label="Attach File">
+                    +
+                  </button>
+                  <input onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} onChange={(e) => setMessage(e.target.value)} type="text" placeholder="Type a message..." value={message} />
+                  <button onClick={() => handleSendMessage()} type="button" aria-label="Send Message">
+                    Send
+                  </button>
+                </>
+              )}
+            </div>
           </>
         ) : (
           <div className={styles.rootEmptyState}>
