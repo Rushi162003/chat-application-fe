@@ -1,0 +1,11 @@
+.root {
+  position: relative;
+  min-height: 100dvh;
+  isolation: isolate;
+
+  &Content {
+    position: relative;
+    z-index: 1;
+    min-height: 100dvh;
+  }
+}

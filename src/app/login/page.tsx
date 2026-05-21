@@ -8,6 +8,7 @@ import Message from "@/src/components/Snackbar/message";
 import Cookies from "js-cookie";
 import { axiosFetch } from "@/hooks/useAxios";
 import { miscStore } from "@/src/stores/miscStore";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +18,8 @@ export default function LoginPage() {
 
 
   const [isLoginPage, setIsLoginPage] = useState<boolean>(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<{
     email: string;
     password: string;
@@ -26,65 +29,52 @@ export default function LoginPage() {
   const onSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      if (isLoginPage) {
-        try {
-          const response = await axios.post(API_ENDPOINTS.LOGIN, formData);
-          if (response.status === 200) {
-            Cookies.set("access", response.data.token);
-            const [me] = await axiosFetch({
-              url: API_ENDPOINTS.ME,
-              method: "GET",
-            });
-            if (me) {
-              setMe(me);
-            }
-            router.push(PAGES.HOME);
-          }
-        } catch (error) {
-          if (axios.isAxiosError(error) && error.response) {
-            Message.error(error.response.data.message);
-          } else {
-            Message.error("An error occurred");
-          }
-        }
-      } else {
-        try {
-          const response = await axios.post(API_ENDPOINTS.SIGNUP, formData);
+      if (isSubmitting) return;
 
-          if (response.status === 200) {
-            Cookies.set("access", response.data.token);
-            const [me] = await axiosFetch({
-              url: API_ENDPOINTS.ME,
-              method: "GET",
-            });
-            if (me) {
-              setMe(me);
-            }
-            router.push(PAGES.HOME);
+      setIsSubmitting(true);
+      try {
+        const endpoint = isLoginPage ? API_ENDPOINTS.LOGIN : API_ENDPOINTS.SIGNUP;
+        const response = await axios.post(endpoint, formData);
+
+        if (response.status === 200) {
+          Cookies.set("access", response.data.token);
+          const [me] = await axiosFetch({
+            url: API_ENDPOINTS.ME,
+            method: "GET",
+          });
+          if (me) {
+            setMe(me);
           }
-        } catch (error) {
-          if (axios.isAxiosError(error) && error.response) {
-            Message.error(error.response.data.message);
-          } else {
-            Message.error("An error occurred");
-          }
+          router.push(PAGES.HOME);
         }
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          Message.error(error.response.data.message);
+        } else {
+          Message.error("An error occurred");
+        }
+      } finally {
+        setIsSubmitting(false);
       }
     },
-    [formData, isLoginPage, router]
+    [formData, isLoginPage, isSubmitting, router, setMe]
   );
 
+  const inputClass =
+    "w-full rounded-lg border border-cyan-400/20 bg-[rgba(6,14,28,0.75)] px-3 py-2.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-cyan-400/60 focus:ring-4 focus:ring-cyan-500/15";
+
   return (
-    <div className="flex min-h-screen flex-1 flex-col items-center justify-center bg-zinc-50 px-4 py-12 dark:bg-zinc-950">
-      <div className="w-full max-w-[400px] rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+    <div className="flex min-h-screen flex-1 flex-col items-center justify-center px-4 py-12">
+      <div className="w-full max-w-[420px] animate-[fadeUp_0.7s_ease] rounded-2xl border border-cyan-400/25 bg-[rgba(8,16,30,0.62)] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
         <div className="mb-8 text-center">
-          <p className="text-sm font-medium text-violet-600 dark:text-violet-400">
-            Chat
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/35 px-3 py-1 text-xs font-medium tracking-wide text-cyan-300">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300" />
+            LIVE CHAT PLATFORM
+          </span>
+          <h1 className="mt-4 bg-gradient-to-r from-white via-cyan-100 to-cyan-400 bg-clip-text text-3xl font-semibold tracking-tight text-transparent">
             Welcome back
           </h1>
-          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-2 text-sm text-slate-300/80">
             {isLoginPage ? "Sign in" : "Create an account"} to continue
           </p>
         </div>
@@ -94,7 +84,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <label
                 htmlFor="name"
-                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                className="block text-sm font-medium text-slate-200"
               >
                 Name
               </label>
@@ -104,8 +94,9 @@ export default function LoginPage() {
                 type="text"
                 autoComplete="name"
                 placeholder="John Doe"
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none ring-violet-500/20 transition placeholder:text-zinc-400 focus:border-violet-500 focus:ring-4 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-violet-400"
+                className={inputClass}
                 value={formData.name}
+                disabled={isSubmitting}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
@@ -116,7 +107,7 @@ export default function LoginPage() {
           <div className="space-y-2">
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              className="block text-sm font-medium text-slate-200"
             >
               Email
             </label>
@@ -126,8 +117,9 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               placeholder="you@example.com"
-              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none ring-violet-500/20 transition placeholder:text-zinc-400 focus:border-violet-500 focus:ring-4 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-violet-400"
+              className={inputClass}
               value={formData.email}
+              disabled={isSubmitting}
               onChange={(e) =>
                 setFormData({ ...formData, email: e.target.value })
               }
@@ -138,47 +130,71 @@ export default function LoginPage() {
             <div className="flex items-center justify-between gap-2">
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                className="block text-sm font-medium text-slate-200"
               >
                 Password
               </label>
               {isLoginPage && (
                 <button
                   type="button"
-                  className="text-sm font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
+                  className="text-sm font-medium text-cyan-300 hover:text-cyan-200"
                 >
                   Forgot password?
                 </button>
               )}
             </div>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none ring-violet-500/20 transition placeholder:text-zinc-400 focus:border-violet-500 focus:ring-4 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-violet-400"
-              value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
-            />
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete={isLoginPage ? "current-password" : "new-password"}
+                placeholder="••••••••"
+                className={`${inputClass} pr-10`}
+                value={formData.password}
+                disabled={isSubmitting}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+              />
+              <button
+                type="button"
+                disabled={isSubmitting}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 transition hover:text-cyan-200 disabled:opacity-50"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           <button
             type="submit"
-            className="flex w-full items-center justify-center rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 active:bg-violet-800 dark:bg-violet-500 dark:hover:bg-violet-400 dark:focus-visible:outline-violet-400 dark:active:bg-violet-600 cursor-pointer"
+            disabled={isSubmitting}
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#3a7bd5] to-[#00d2ff] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,210,255,0.35)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isLoginPage ? "Sign in" : "Sign up"}
+            {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+            {isSubmitting
+              ? isLoginPage
+                ? "Signing in..."
+                : "Signing up..."
+              : isLoginPage
+                ? "Sign in"
+                : "Sign up"}
           </button>
         </form>
 
-        <p className="mt-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="mt-8 text-center text-sm text-slate-300/80">
           {isLoginPage ? "Don't have an account?" : "Already have an account?"}{" "}
           <button
             type="button"
-            className="font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
-            onClick={() => setIsLoginPage(!isLoginPage)}
+            className="font-medium text-cyan-300 hover:text-cyan-200"
+            disabled={isSubmitting}
+            onClick={() => {
+              setIsLoginPage(!isLoginPage);
+              setShowPassword(false);
+            }}
           >
             {isLoginPage ? "Create one" : "Sign in"}
           </button>

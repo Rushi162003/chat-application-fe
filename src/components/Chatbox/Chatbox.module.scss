@@ -34,20 +34,20 @@
   display: grid;
   grid-template-columns: 350px 1fr;
   min-height: 100dvh;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: linear-gradient(180deg,
-      color-mix(in srgb, var(--foreground) 4%, transparent) 0%,
-      transparent 55%);
+  gap: 0.85rem;
+  padding: 0.85rem;
+  background: transparent;
+  animation: fadeUp 0.55s ease;
 
   &Messages {
     padding: 0.75rem;
-    height: calc(100dvh - 1.5rem);
-    background: color-mix(in srgb, var(--foreground) 5%, transparent);
+    height: calc(100dvh - 1.7rem);
+    background: rgba(8, 16, 30, 0.58);
+    backdrop-filter: blur(14px);
     overflow-y: auto;
-    border: 1px solid color-mix(in srgb, var(--foreground) 15%, transparent);
+    border: 1px solid rgba(0, 210, 255, 0.2);
     border-radius: 1rem;
-    box-shadow: 0 12px 36px color-mix(in srgb, #000000 18%, transparent);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.42);
     @include customScrollbar;
 
     &MeCard {
@@ -55,8 +55,8 @@
       align-items: center;
       gap: 0.65rem;
       padding: 0.6rem 0.65rem;
-      border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
-      background: color-mix(in srgb, #7860ff 10%, transparent);
+      border: 1px solid rgba(0, 210, 255, 0.24);
+      background: linear-gradient(135deg, rgba(58, 123, 213, 0.2), rgba(0, 210, 255, 0.08));
       border-radius: 0.9rem;
       margin-bottom: 0.85rem;
 
@@ -70,7 +70,7 @@
         font-size: 0.86rem;
         font-weight: 700;
         color: #ffffff;
-        background: linear-gradient(135deg, #7860ff 0%, #59a3ff 100%);
+        background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
         flex-shrink: 0;
       }
 
@@ -129,7 +129,7 @@
 
       button {
         border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
-        background: linear-gradient(135deg, #7860ff 0%, #5d95ff 100%);
+        background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
         color: inherit;
         padding: 0.45rem 0.7rem;
         border-radius: 999px;
@@ -147,15 +147,16 @@
 
   &Chatbox {
     padding: 1rem;
-    height: calc(100dvh - 1.5rem);
+    height: calc(100dvh - 1.7rem);
     overflow: hidden;
     display: flex;
     justify-content: space-between;
     flex-direction: column;
     border-radius: 1rem;
-    border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
-    background: color-mix(in srgb, var(--foreground) 2.5%, transparent);
-    box-shadow: 0 12px 36px color-mix(in srgb, #000000 18%, transparent);
+    border: 1px solid rgba(0, 210, 255, 0.2);
+    background: rgba(8, 16, 30, 0.52);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.42);
   }
 
   &Header {
@@ -240,8 +241,8 @@
       font-size: 1.1rem;
       font-weight: 700;
       color: #ffffff;
-      background: linear-gradient(135deg, #7860ff 0%, #59a3ff 100%);
-      box-shadow: 0 8px 24px color-mix(in srgb, #7860ff 36%, transparent);
+      background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+      box-shadow: 0 8px 24px rgba(0, 210, 255, 0.35);
     }
 
     h2 {
@@ -258,7 +259,7 @@
 
     button {
       border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
-      background: linear-gradient(135deg, #7860ff 0%, #5d95ff 100%);
+      background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
       color: #ffffff;
       padding: 0.5rem 0.85rem;
       border-radius: 999px;
@@ -345,7 +346,8 @@
 
     &Sent {
       align-self: flex-end;
-      background: color-mix(in srgb, #7860ff 18%, transparent);
+      background: linear-gradient(135deg, rgba(58, 123, 213, 0.42), rgba(0, 210, 255, 0.2));
+      border-color: rgba(0, 210, 255, 0.28);
       padding-top: 0.4rem;
     }
 
@@ -480,7 +482,8 @@
 .newChatOverlay {
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, #000000 55%, transparent);
+  background: rgba(2, 6, 14, 0.72);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -493,8 +496,9 @@
   display: flex;
   flex-direction: column;
   border-radius: 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
-  background: color-mix(in srgb, var(--background) 95%, #121212);
+  border: 1px solid rgba(0, 210, 255, 0.28);
+  background: rgba(8, 16, 30, 0.82);
+  backdrop-filter: blur(16px);
   overflow: hidden;
 }
 

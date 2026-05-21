@@ -9,16 +9,17 @@
     justify-content: flex-start;
     gap: 1rem;
     padding: 0.75rem;
-    background: color-mix(in srgb, var(--foreground) 5%, transparent);
-    border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+    background: rgba(6, 14, 28, 0.45);
+    border: 1px solid rgba(0, 210, 255, 0.14);
     border-radius: 0.8rem;
     cursor: pointer;
-    transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+    transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 
     &:hover {
-        background: color-mix(in srgb, var(--foreground) 10%, transparent);
+        background: rgba(58, 123, 213, 0.18);
         transform: translateY(-1px);
-        border-color: color-mix(in srgb, #7860ff 32%, transparent);
+        border-color: rgba(0, 210, 255, 0.38);
+        box-shadow: 0 8px 20px rgba(0, 210, 255, 0.12);
     }
 
     &ImageContainer {

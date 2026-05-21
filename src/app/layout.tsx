@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "@/src/pages/globals.css";
 import Snackbar from "@/src/components/Snackbar/Snackbar";
 import AuthBootstrap from "@/src/components/AuthBootstrap/AuthBootstrap";
+import AnimatedShell from "@/src/components/AnimatedBackground/AnimatedShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,7 +31,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen flex flex-col font-sans antialiased`}
       >
         <AuthBootstrap />
-        {children}
+        <AnimatedShell>{children}</AnimatedShell>
         <div id="portals" />
         <Snackbar />
       </body>
