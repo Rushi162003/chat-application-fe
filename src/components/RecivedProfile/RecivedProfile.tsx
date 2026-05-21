@@ -1,8 +1,16 @@
-import Image from "next/image";
 import styles from "./RecivedProfile.module.scss";
 import { ChatResponse } from "@/src/common/api-res";
-import avatar from "@/public/file.svg";
 import { Check, CheckCheck } from "lucide-react";
+
+const getInitials = (value?: string) => {
+    if (!value) return "U";
+    return value
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() || "")
+        .join("");
+};
 
 type MessageTickStatus = "unread" | "delivered" | "read";
 
@@ -46,8 +54,8 @@ const RecivedProfile = ({
 
     return (
         <div onClick={() => handleProfileClick(profile?._id || "")} className={styles.root}>
-            <div className={styles.rootImageContainer}>
-                <Image className={styles.rootImageContainerImg} src={avatar} alt={profile?.receiver?.name || ""} width={100} height={100} />
+            <div className={styles.rootAvatar} aria-hidden>
+                {getInitials(profile?.receiver?.name)}
             </div>
             <div className={styles.rootInfo}>
                 <div className={styles.rootInfoHeader}>

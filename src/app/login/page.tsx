@@ -60,7 +60,7 @@ export default function LoginPage() {
     [formData, isLoginPage, isSubmitting, router, setMe]
   );
 
-  const inputClass =
+    const inputClass =
     "w-full rounded-lg border border-cyan-400/20 bg-[rgba(6,14,28,0.75)] px-3 py-2.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-cyan-400/60 focus:ring-4 focus:ring-cyan-500/15";
 
   return (
