@@ -18,7 +18,7 @@ import { API_ENDPOINTS, SOCKET_EVENTS } from "@/src/common/enums";
 import Message from "../Snackbar/message";
 import { ChatResponse, MessageResponse, User } from "@/src/common/api-res";
 import { miscStore } from "@/src/stores/miscStore";
-import { Check, CheckCheck, Image as ImageIcon, MapPin, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, Image as ImageIcon, MapPin, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import type { Socket } from "socket.io-client";
 import LocationMessageCard from "../LocationMap/LocationMessageCard";
 
@@ -297,6 +297,14 @@ const Chatbox = () => {
     return incomingMessages;
   }, []);
 
+  const handleBackToList = useCallback(() => {
+    setActiveMessageMenuId(null);
+    handleCancelEditMessage();
+    setSelectedChat(null);
+    setActiveChatId(null);
+    setMessages([]);
+  }, [handleCancelEditMessage, setActiveChatId]);
+
   const handleProfileClick = useCallback(async (id: string) => {
     setActiveMessageMenuId(null);
     handleCancelEditMessage();
@@ -538,7 +546,9 @@ const Chatbox = () => {
 
   return (
     <div className={styles.root}>
-      <div className={styles.rootMessages}>
+      <div
+        className={`${styles.rootMessages} ${selectedChat ? styles.rootMessages_mobileHidden : ""}`}
+      >
         <div className={styles.rootMessagesMeCard}>
           <div className={styles.rootMessagesMeCardAvatar}>{getInitials(me?.name)}</div>
           <div className={styles.rootMessagesMeCardInfo}>
@@ -563,15 +573,25 @@ const Chatbox = () => {
           ))}
         </div>
       </div>
-      <div className={styles.rootChatbox}>
+      <div
+        className={`${styles.rootChatbox} ${!selectedChat ? styles.rootChatbox_mobileHidden : ""}`}
+      >
         {selectedChat ? (
           <>
             <div className={styles.rootHeader}>
               <div className={styles.rootHeaderProfile}>
-                <div className={`${styles.rootHeaderProfileDot} ${onlineUsers?.includes(selectedChat?.receiver?._id || "") ? styles.rootHeaderProfileDotOnline : styles.rootHeaderProfileDotOffline}`} />
+                <button
+                  type="button"
+                  className={styles.rootHeaderBack}
+                  aria-label="Back to chats"
+                  onClick={handleBackToList}
+                >
+                  <ArrowLeft size={20} />
+                </button>
+                <div className={`${styles.rootHeaderProfileDot} ${onlineUsers?.includes(getChatPeerId(selectedChat, me?._id || "")) ? styles.rootHeaderProfileDotOnline : styles.rootHeaderProfileDotOffline}`} />
                 <div>
-                  <h1>{selectedChat?.receiver?.name || ""}</h1>
-                  <p>{onlineUsers?.includes(selectedChat?.receiver?._id || "") ? "Online" : "Offline"}</p>
+                  <h1>{getChatPeerName(selectedChat, me?._id || "")}</h1>
+                  <p>{onlineUsers?.includes(getChatPeerId(selectedChat, me?._id || "")) ? "Online" : "Offline"}</p>
                 </div>
               </div>
               <div className={styles.rootHeaderActions}>

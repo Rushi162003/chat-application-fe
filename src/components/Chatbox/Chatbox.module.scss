@@ -170,15 +170,38 @@
     justify-content: space-between;
     gap: 0.75rem;
 
+    &Back {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+      background: color-mix(in srgb, var(--foreground) 8%, transparent);
+      color: inherit;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
     &Profile {
       display: flex;
       align-items: center;
       gap: 0.7rem;
+      min-width: 0;
+
+      > div:last-of-type {
+        min-width: 0;
+      }
 
       h1 {
         font-size: 1rem;
         font-weight: 700;
         line-height: 1.2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       p {
@@ -500,11 +523,36 @@
     gap: 0.5rem;
 
     &Messages {
-      display: none;
+      width: 100%;
+      height: calc(100dvh - 1rem);
+      min-height: 0;
+
+      &_mobileHidden {
+        display: none;
+      }
     }
 
     &Chatbox {
+      width: 100%;
       height: calc(100dvh - 1rem);
+      min-height: 0;
+
+      &_mobileHidden {
+        display: none;
+      }
+    }
+
+    &Header {
+      &Back {
+        display: inline-flex;
+      }
+
+      &Actions {
+        button {
+          padding: 0.4rem 0.55rem;
+          font-size: 0.72rem;
+        }
+      }
     }
   }
 }
