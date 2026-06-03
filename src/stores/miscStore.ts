@@ -40,6 +40,8 @@ export const miscStore = create<MiscStore>((set) => ({
                 messagesRes.__v === prev.__v &&
                 messagesRes.updatedAt === prev.updatedAt &&
                 messagesRes.text === prev.text &&
+                messagesRes.type === prev.type &&
+                messagesRes.location === prev.location &&
                 messagesRes.isEdited === prev.isEdited &&
                 JSON.stringify(messagesRes.readBy) === JSON.stringify(prev.readBy) &&
                 JSON.stringify(messagesRes.deliveredTo) === JSON.stringify(prev.deliveredTo)

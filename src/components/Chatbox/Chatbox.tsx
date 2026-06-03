@@ -3,6 +3,11 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import RecivedProfile from "../RecivedProfile/RecivedProfile";
 import { useSocket } from "@/hooks/useSocket";
+import { useWebRTC } from "@/hooks/useWebRTC";
+import IncomingCallModal from "../Call/IncomingCallModal";
+import CallOverlay from "../Call/CallOverlay";
+import { getChatPeerId, getChatPeerName } from "@/src/common/chat-utils";
+import type { CallType } from "@/src/common/call-types";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 
@@ -13,8 +18,9 @@ import { API_ENDPOINTS, SOCKET_EVENTS } from "@/src/common/enums";
 import Message from "../Snackbar/message";
 import { ChatResponse, MessageResponse, User } from "@/src/common/api-res";
 import { miscStore } from "@/src/stores/miscStore";
-import { Check, CheckCheck, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Check, CheckCheck, Image as ImageIcon, MapPin, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import type { Socket } from "socket.io-client";
+import LocationMessageCard from "../LocationMap/LocationMessageCard";
 
 const MESSAGES_PAGE_SIZE = 20;
 
@@ -78,7 +84,27 @@ const getInitials = (value?: string) => {
 const Chatbox = () => {
   const router = useRouter();
   const socket = useSocket();
+  
+  const {
+    callStatus,
+    callType,
+    incomingCall,
+    localStream,
+    remoteStream,
+    peerName: callPeerName,
+    isMuted,
+    isVideoOff,
+    isCallActive,
+    startCall,
+    acceptCall,
+    rejectCall,
+    endCall,
+    toggleMute,
+    toggleVideo,
+  } = useWebRTC(socket);
+
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const paginationDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onlineUsers = miscStore((state) => state.onlineUsers);
@@ -103,6 +129,8 @@ const Chatbox = () => {
   const [activeMessageMenuId, setActiveMessageMenuId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingMessageText, setEditingMessageText] = useState("");
+  const [isSharingLocation, setIsSharingLocation] = useState(false);
+  const [showAttachModal, setShowAttachModal] = useState(false);
 
   const handleSendMessage = useCallback(() => {
     if (message.trim()) {
@@ -337,6 +365,69 @@ const Chatbox = () => {
     Message.error("Chat created, but could not open it automatically.");
   }, [fetchChats, handleProfileClick, me?._id]);
 
+  const handleShareLocation = useCallback(() => {
+    if (!selectedChat?._id || !socket) return;
+
+    if (!navigator.geolocation) {
+      Message.error("Geolocation is not supported in this browser.");
+      return;
+    }
+
+    setIsSharingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        socket.emit("send-message", {
+          chatId: selectedChat._id,
+          type: "location",
+          location: { lat, lng },
+        });
+        setIsSharingLocation(false);
+        setShowAttachModal(false);
+      },
+      (err) => {
+        setIsSharingLocation(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          Message.error("Location permission denied.");
+        } else {
+          Message.error("Could not get your location.");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }, [socket, selectedChat?._id]);
+
+  const handleStartCall = useCallback(
+    (type: CallType) => {
+      if (!selectedChat?._id || !me?._id) return;
+      if (isCallActive) {
+        Message.warning("Already in a call");
+        return;
+      }
+      const peerId = getChatPeerId(selectedChat, me._id);
+      if (!peerId) return;
+      if (!onlineUsers?.includes(peerId)) {
+        Message.error("User is offline");
+        return;
+      }
+      startCall(peerId, selectedChat._id, getChatPeerName(selectedChat, me._id), type);
+    },
+    [selectedChat, me?._id, onlineUsers, isCallActive, startCall]
+  );
+
+  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    setShowAttachModal(false);
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      Message.error("Please select an image file.");
+      return;
+    }
+    Message.info("Image sharing will be available once the backend upload API is connected.");
+  }, []);
+
   useEffect(() => {
     fetchChats();
   }, []);
@@ -468,7 +559,7 @@ const Chatbox = () => {
 
         <div className={styles.rootMessagesList}>
           {chats.map((item) => (
-            <RecivedProfile key={`${item.receiver?.name}-yesterday`} profile={item} handleProfileClick={handleProfileClick} myUserId={me?._id || ""} />
+            <RecivedProfile key={`${item.receiver?.name}-yesterday`} profile={item} handleProfileClick={handleProfileClick} myUserId={me?._id || ""} selectedChatId={selectedChat?._id || ""} />
           ))}
         </div>
       </div>
@@ -484,15 +575,25 @@ const Chatbox = () => {
                 </div>
               </div>
               <div className={styles.rootHeaderActions}>
-                <button type="button" aria-label="Voice Call">
+                <button
+                  type="button"
+                  aria-label="Voice Call"
+                  disabled={isCallActive}
+                  onClick={() => handleStartCall("audio")}
+                >
                   Call
                 </button>
-                <button type="button" aria-label="Video Call">
+                <button
+                  type="button"
+                  aria-label="Video Call"
+                  disabled={isCallActive}
+                  onClick={() => handleStartCall("video")}
+                >
                   Video
                 </button>
-                <button type="button" aria-label="Open More Options">
+                {/* <button type="button" aria-label="Open More Options">
                   More
-                </button>
+                </button> */}
               </div>
             </div>
 
@@ -512,10 +613,12 @@ const Chatbox = () => {
                       ? styles.rootContentTickDelivered
                       : styles.rootContentTickUnread;
 
+                const isLocationMessage = m.type === "location" && Boolean(m.location);
+
                 return (
                   <div
                     key={m._id}
-                    className={`${isMine ? styles.rootContentSent : styles.rootContentReceived} ${editingMessageId === m._id ? styles.rootContentEditing : ""}`}
+                    className={`${isMine ? styles.rootContentSent : styles.rootContentReceived} ${editingMessageId === m._id ? styles.rootContentEditing : ""} ${isLocationMessage ? styles.rootContentLocationBubble : ""}`}
                   >
                     {isMine && (
                       <div className={styles.rootContentToolbar}>
@@ -535,10 +638,12 @@ const Chatbox = () => {
                             className={`${styles.rootContentActionsMenu} ${isNewestMessage ? styles.rootContentActionsMenuUp : ""}`}
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <button type="button" onClick={() => handleStartEditMessage(m)}>
-                              <Pencil size={14} />
-                              Edit
-                            </button>
+                            {m.type !== "location" && (
+                              <button type="button" onClick={() => handleStartEditMessage(m)}>
+                                <Pencil size={14} />
+                                Edit
+                              </button>
+                            )}
                             <button type="button" onClick={() => handleDeleteMessage(m)}>
                               <Trash2 size={14} />
                               Delete
@@ -547,7 +652,13 @@ const Chatbox = () => {
                         )}
                       </div>
                     )}
-                    <p className={styles.rootContentText}>{m.text}</p>
+                    {isLocationMessage && m.location ? (
+                      <div className={styles.rootContentMap}>
+                        <LocationMessageCard lat={m.location.lat} lng={m.location.lng} />
+                      </div>
+                    ) : (
+                      <p className={styles.rootContentText}>{m.text}</p>
+                    )}
                     <div
                       className={`${styles.rootContentMeta} ${isMine ? styles.rootContentMeta_end : ""}`}
                     >
@@ -601,11 +712,28 @@ const Chatbox = () => {
                 </>
               ) : (
                 <>
-                  <button type="button" aria-label="Attach File">
-                    +
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={handleImageSelect}
+                  />
+                  <button
+                    type="button"
+                    className={styles.rootFooterAttachBtn}
+                    aria-label="Attach"
+                    onClick={() => setShowAttachModal(true)}
+                  >
+                    <Plus size={18} />
                   </button>
                   <input onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} onChange={(e) => setMessage(e.target.value)} type="text" placeholder="Type a message..." value={message} />
-                  <button onClick={() => handleSendMessage()} type="button" aria-label="Send Message">
+                  <button
+                    className={styles.rootFooterSendBtn}
+                    onClick={() => handleSendMessage()}
+                    type="button"
+                    aria-label="Send Message"
+                  >
                     Send
                   </button>
                 </>
@@ -623,6 +751,73 @@ const Chatbox = () => {
           </div>
         )}
       </div>
+      {callStatus === "incoming" && incomingCall && (
+        <IncomingCallModal
+          incomingCall={incomingCall}
+          peerName={callPeerName}
+          onAccept={acceptCall}
+          onReject={rejectCall}
+        />
+      )}
+      {(callStatus === "outgoing" || callStatus === "connecting" || callStatus === "in-call") && (
+        <CallOverlay
+          callStatus={callStatus}
+          callType={callType}
+          peerName={callPeerName}
+          localStream={localStream}
+          remoteStream={remoteStream}
+          isMuted={isMuted}
+          isVideoOff={isVideoOff}
+          onEndCall={() => endCall(true)}
+          onToggleMute={toggleMute}
+          onToggleVideo={toggleVideo}
+        />
+      )}
+      {showAttachModal && selectedChat && (
+        <div
+          className={styles.attachOverlay}
+          onClick={() => !isSharingLocation && setShowAttachModal(false)}
+        >
+          <div className={styles.attachModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.attachHeader}>
+              <h3>Share</h3>
+              <button
+                type="button"
+                onClick={() => setShowAttachModal(false)}
+                disabled={isSharingLocation}
+              >
+                Close
+              </button>
+            </div>
+            <div className={styles.attachOptions}>
+              <button
+                type="button"
+                className={styles.attachOption}
+                onClick={handleShareLocation}
+                disabled={isSharingLocation}
+              >
+                <span className={`${styles.attachOptionIcon} ${styles.attachOptionIcon_location}`}>
+                  <MapPin size={20} />
+                </span>
+                <span>{isSharingLocation ? "Getting location…" : "Current location"}</span>
+                <small>Share your live GPS position</small>
+              </button>
+              <button
+                type="button"
+                className={styles.attachOption}
+                onClick={() => imageInputRef.current?.click()}
+                disabled={isSharingLocation}
+              >
+                <span className={`${styles.attachOptionIcon} ${styles.attachOptionIcon_image}`}>
+                  <ImageIcon size={20} />
+                </span>
+                <span>Image</span>
+                <small>Send a photo from your device</small>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showNewChatModal && (
         <div className={styles.newChatOverlay} onClick={() => !isStartingChat && setShowNewChatModal(false)}>
           <div className={styles.newChatModal} onClick={(e) => e.stopPropagation()}>

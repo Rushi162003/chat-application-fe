@@ -13,10 +13,12 @@
     "classname": "^0.0.0",
     "classnames": "^2.5.1",
     "js-cookie": "^3.0.5",
+    "leaflet": "^1.9.4",
     "lucide-react": "^1.8.0",
     "next": "16.2.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-leaflet": "^5.0.0",
     "sass": "^1.99.0",
     "scss": "^0.2.4",
     "socket.io": "^4.8.3",
@@ -26,6 +28,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/js-cookie": "^3.0.6",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -35,4 +38,3 @@
     "typescript": "^5"
   }
 }
-  

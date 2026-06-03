@@ -30,11 +30,20 @@ export interface ChatResponse {
     unreadCount: number;
 }
 
+export type MessageType = "text" | "location";
+
+export interface MessageLocation {
+    lat: number;
+    lng: number;
+}
+
 export interface MessageResponse {
     _id: string;
     chatId: string;
     senderId: string;
     text: string;
+    type?: MessageType;    
+    location?: MessageLocation;
     readBy: string[];
     deliveredTo: string[];
     createdAt: Date;

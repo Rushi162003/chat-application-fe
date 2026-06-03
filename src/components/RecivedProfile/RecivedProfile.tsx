@@ -1,5 +1,6 @@
 import styles from "./RecivedProfile.module.scss";
 import { ChatResponse } from "@/src/common/api-res";
+import { miscStore } from "@/src/stores/miscStore";
 import { Check, CheckCheck } from "lucide-react";
 
 const getInitials = (value?: string) => {
@@ -34,15 +35,17 @@ const RecivedProfile = ({
     profile,
     handleProfileClick,
     myUserId,
+    selectedChatId
 }: {
     profile: ChatResponse | null;
     handleProfileClick: (id: string) => void;
     myUserId?: string;
+    selectedChatId?: string;
 }) => {
     const lastMessageStatus = getMessageTickStatus(
         profile?.lastMessage?.senderId,
         profile?.lastMessage?.readBy,
-        myUserId
+        myUserId,
     );
 
     const tickClass =
@@ -53,7 +56,7 @@ const RecivedProfile = ({
                 : styles.rootInfoMessageTickUnread;
 
     return (
-        <div onClick={() => handleProfileClick(profile?._id || "")} className={styles.root}>
+        <div onClick={() => handleProfileClick(profile?._id || "")} className={`${styles.root} ${selectedChatId === profile?._id ? styles.rootActive : ""}`}>
             <div className={styles.rootAvatar} aria-hidden>
                 {getInitials(profile?.receiver?.name)}
             </div>

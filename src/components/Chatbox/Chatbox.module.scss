@@ -428,6 +428,17 @@
       font-style: italic;
       color: color-mix(in srgb, var(--foreground) 62%, transparent);
     }
+
+    &LocationBubble {
+      max-width: min(320px, 88%);
+      padding: 0.65rem 0.7rem 0.55rem;
+    }
+
+    &Map {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
   }
 
   &Footer {
@@ -461,6 +472,25 @@
       cursor: pointer;
       background: color-mix(in srgb, var(--foreground) 8%, transparent);
       color: inherit;
+    }
+
+    &AttachBtn {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(58, 123, 213, 0.35), rgba(0, 210, 255, 0.15));
+      border-color: color-mix(in srgb, #00d2ff 35%, transparent);
+    }
+
+    &SendBtn {
+      background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+      border-color: transparent;
+      color: #ffffff;
     }
   }
 
@@ -586,6 +616,127 @@
   margin: 0.35rem 0;
   font-size: 0.85rem;
   color: color-mix(in srgb, var(--foreground) 65%, transparent);
+}
+
+.attachOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 14, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+
+  @media (min-width: 520px) {
+    align-items: center;
+  }
+}
+
+.attachModal {
+  width: min(360px, 100%);
+  border-radius: 1rem;
+  border: 1px solid rgba(0, 210, 255, 0.28);
+  background: rgba(8, 16, 30, 0.92);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+  animation: attachSlideUp 0.22s ease;
+}
+
+.attachHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+
+  h3 {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  button {
+    border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+    background: color-mix(in srgb, var(--foreground) 8%, transparent);
+    color: inherit;
+    border-radius: 999px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+}
+
+.attachOptions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  padding: 0.85rem;
+}
+
+.attachOption {
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  color: inherit;
+  border-radius: 0.85rem;
+  padding: 0.85rem 0.65rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: color-mix(in srgb, #00d2ff 45%, transparent);
+    background: color-mix(in srgb, #00d2ff 8%, transparent);
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: wait;
+  }
+
+  span {
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  small {
+    font-size: 0.68rem;
+    color: color-mix(in srgb, var(--foreground) 62%, transparent);
+    text-align: center;
+    line-height: 1.3;
+  }
+}
+
+.attachOptionIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.attachOptionIcon_location {
+  background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+}
+
+.attachOptionIcon_image {
+  background: linear-gradient(135deg, #7860ff 0%, #b06bff 100%);
+}
+
+@keyframes attachSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .newChatUser {
