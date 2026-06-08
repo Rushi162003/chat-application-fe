@@ -12,11 +12,15 @@ import type {
 import Message from "@/src/components/Snackbar/message";
 
 const ICE_SERVERS: RTCIceServer[] = [
-  { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: "stun:stun.relay.metered.ca:80" },
+  {
+    urls: [process.env.NEXT_PUBLIC_TURN_URL as string],
+    username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+    credential: process.env.NEXT_PUBLIC_TURN_PASSWORD,
+  },
 ];
 
-export type { CallStatus };
+export type { CallStatus }; 
 
 export function useWebRTC(socket: Socket | null) {
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
