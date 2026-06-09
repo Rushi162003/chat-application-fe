@@ -463,6 +463,14 @@
       color: color-mix(in srgb, var(--foreground) 62%, transparent);
     }
 
+    &SenderName {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+      line-height: 1.2;
+    }
+
     &LocationBubble {
       max-width: min(320px, 88%);
       padding: 0.65rem 0.7rem 0.55rem;
@@ -700,6 +708,103 @@
   color: color-mix(in srgb, var(--foreground) 65%, transparent);
 }
 
+.newChatTabs {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem 0;
+}
+
+.newChatTab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  color: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.newChatTabActive {
+  border-color: rgba(0, 210, 255, 0.45);
+  background: linear-gradient(135deg, rgba(58, 123, 213, 0.32), rgba(0, 210, 255, 0.16));
+  font-weight: 600;
+}
+
+.newChatChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem 0;
+}
+
+.newChatChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.3rem 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 210, 255, 0.35);
+  background: color-mix(in srgb, #00d2ff 12%, transparent);
+  font-size: 0.78rem;
+
+  button {
+    border: none;
+    background: transparent;
+    color: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0.12rem;
+    border-radius: 999px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+  }
+}
+
+.newChatUserSelected {
+  border-color: rgba(0, 210, 255, 0.5);
+  background: color-mix(in srgb, #00d2ff 10%, transparent);
+}
+
+.newChatUserCheck {
+  position: absolute;
+  right: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #00d2ff;
+  display: inline-flex;
+}
+
+.newChatFooter {
+  padding: 0.7rem 0.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+
+  button {
+    width: 100%;
+    padding: 0.6rem;
+    border: none;
+    border-radius: 0.7rem;
+    background: linear-gradient(135deg, #3a7bd5, #00d2ff);
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
 .attachOverlay {
   position: fixed;
   inset: 0;
@@ -822,6 +927,7 @@
 }
 
 .newChatUser {
+  position: relative;
   width: 100%;
   text-align: left;
   border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);

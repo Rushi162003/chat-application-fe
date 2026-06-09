@@ -55,14 +55,19 @@ const RecivedProfile = ({
                 ? styles.rootInfoMessageTickDelivered
                 : styles.rootInfoMessageTickUnread;
 
+    const displayName =
+        profile?.type === "group"
+            ? profile?.name || "Group"
+            : profile?.receiver?.name || "";
+
     return (
         <div onClick={() => handleProfileClick(profile?._id || "")} className={`${styles.root} ${selectedChatId === profile?._id ? styles.rootActive : ""}`}>
             <div className={styles.rootAvatar} aria-hidden>
-                {getInitials(profile?.receiver?.name)}
+                {getInitials(displayName)}
             </div>
             <div className={styles.rootInfo}>
                 <div className={styles.rootInfoHeader}>
-                    <span className={styles.rootInfoHeaderName}>{profile?.receiver?.name || ""}</span>
+                    <span className={styles.rootInfoHeaderName}>{displayName}</span>
                     <div className={styles.rootInfoHeaderMeta}>
                         {(profile?.unreadCount || 0) > 0 && (
                             <span className={styles.rootInfoHeaderUnreadCount}>

@@ -20,8 +20,13 @@ export interface MeResponse {
     updatedAt: Date;
 }
 
+export type ChatType = "direct" | "group";
+
 export interface ChatResponse {
     _id: string;
+    type?: ChatType;
+    name?: string;
+    participants?: (User | string)[];
     sender: User;
     receiver: User;
     lastMessage: MessageResponse;
@@ -41,6 +46,8 @@ export interface MessageResponse {
     _id: string;
     chatId: string;
     senderId: string;
+    /** Populated sender object, if the backend provides it */
+    sender?: User;
     text: string;
     type?: MessageType;    
     location?: MessageLocation;

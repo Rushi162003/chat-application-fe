@@ -6,7 +6,7 @@ import { useSocket } from "@/hooks/useSocket";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import IncomingCallModal from "../Call/IncomingCallModal";
 import CallOverlay from "../Call/CallOverlay";
-import { getChatPeerId, getChatPeerName } from "@/src/common/chat-utils";
+import { getChatPeerId, getChatPeerName, getGroupSenderName } from "@/src/common/chat-utils";
 import type { CallType } from "@/src/common/call-types";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
@@ -82,6 +82,13 @@ const getInitials = (value?: string) => {
     .join("");
 };
 
+/** Deterministic hue per user so each group member gets a stable name color. */
+const getSenderHue = (id: string) => {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) % 360;
+  return hash;
+};
+
 const Chatbox = () => {
   const router = useRouter();
   const socket = useSocket();
@@ -123,6 +130,9 @@ const Chatbox = () => {
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
+  const [newChatMode, setNewChatMode] = useState<"direct" | "group">("direct");
+  const [groupName, setGroupName] = useState("");
+  const [selectedGroupUsers, setSelectedGroupUsers] = useState<User[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isUsersLoading, setIsUsersLoading] = useState(false);
   const [isStartingChat, setIsStartingChat] = useState(false);
@@ -231,8 +241,19 @@ const Chatbox = () => {
 
   const handleOpenNewChatModal = useCallback(async () => {
     setSearchUserEmail("");
+    setNewChatMode("direct");
+    setGroupName("");
+    setSelectedGroupUsers([]);
+    setUsers([]);
     setShowNewChatModal(true);
-    // await fetchUsers();
+  }, []);
+
+  const toggleGroupUser = useCallback((user: User) => {
+    setSelectedGroupUsers((prev) =>
+      prev.some((u) => u._id === user._id)
+        ? prev.filter((u) => u._id !== user._id)
+        : [...prev, user]
+    );
   }, []);
 
   const debounce = (func: (email: string) => void, delay: number) => {
@@ -375,6 +396,45 @@ const Chatbox = () => {
     }
     Message.error("Chat created, but could not open it automatically.");
   }, [fetchChats, handleProfileClick, me?._id]);
+
+  const handleCreateGroup = useCallback(async () => {
+    const name = groupName.trim();
+    if (!name || selectedGroupUsers.length === 0 || !me?._id) return;
+
+    setIsStartingChat(true);
+    const [response, error] = await axiosFetch({
+      method: "POST",
+      url: API_ENDPOINTS.CHATS,
+      requestConfig: {
+        data: {
+          type: "group",
+          name,
+          participants: [me._id, ...selectedGroupUsers.map((u) => u._id)],
+        },
+      },
+    });
+    setIsStartingChat(false);
+    if (error) {
+      Message.error(error?.response?.data?.message || "Unable to create group");
+      return;
+    }
+
+    const refreshedChats = await fetchChats();
+    const createdChatId =
+      (response as { _id?: string; chatId?: string; chat?: { _id?: string } } | null)?._id ||
+      (response as { _id?: string; chatId?: string; chat?: { _id?: string } } | null)?.chatId ||
+      (response as { _id?: string; chatId?: string; chat?: { _id?: string } } | null)?.chat?._id;
+
+    const targetChat =
+      refreshedChats.find((c) => c._id === createdChatId) ||
+      refreshedChats.find((c) => c.type === "group" && c.name === name);
+
+    setShowNewChatModal(false);
+    Message.success(`Group "${name}" created`);
+    if (targetChat?._id) {
+      await handleProfileClick(targetChat._id);
+    }
+  }, [groupName, selectedGroupUsers, me?._id, fetchChats, handleProfileClick]);
 
   const handleShareLocation = useCallback(() => {
     if (!selectedChat?._id || !socket) return;
@@ -576,9 +636,11 @@ const Chatbox = () => {
   }, [messagesRes, fetchChats, selectedChat?._id]);
 
   const displayMessages = useMemo(() => {
-    console.log('messages', messages);
     return [...messages];
   }, [messages]);
+
+  const isGroupSelected = selectedChat?.type === "group";
+  const groupMemberCount = selectedChat?.participants?.length ?? 0;
 
   return (
     <div className={styles.root}>
@@ -605,7 +667,7 @@ const Chatbox = () => {
 
         <div className={styles.rootMessagesList}>
           {chats.map((item) => (
-            <RecivedProfile key={`${item.receiver?.name}-yesterday`} profile={item} handleProfileClick={handleProfileClick} myUserId={me?._id || ""} selectedChatId={selectedChat?._id || ""} />
+            <RecivedProfile key={item._id} profile={item} handleProfileClick={handleProfileClick} myUserId={me?._id || ""} selectedChatId={selectedChat?._id || ""} />
           ))}
         </div>
       </div>
@@ -624,33 +686,38 @@ const Chatbox = () => {
                 >
                   <ArrowLeft size={20} />
                 </button>
-                <div className={`${styles.rootHeaderProfileDot} ${onlineUsers?.includes(getChatPeerId(selectedChat, me?._id || "")) ? styles.rootHeaderProfileDotOnline : styles.rootHeaderProfileDotOffline}`} />
+                {!isGroupSelected && (
+                  <div className={`${styles.rootHeaderProfileDot} ${onlineUsers?.includes(getChatPeerId(selectedChat, me?._id || "")) ? styles.rootHeaderProfileDotOnline : styles.rootHeaderProfileDotOffline}`} />
+                )}
                 <div>
-                  <h1>{getChatPeerName(selectedChat, me?._id || "")}</h1>
-                  <p>{onlineUsers?.includes(getChatPeerId(selectedChat, me?._id || "")) ? "Online" : "Offline"}</p>
+                  <h1>{isGroupSelected ? selectedChat.name || "Group" : getChatPeerName(selectedChat, me?._id || "")}</h1>
+                  <p>
+                    {isGroupSelected
+                      ? `${groupMemberCount} members`
+                      : onlineUsers?.includes(getChatPeerId(selectedChat, me?._id || "")) ? "Online" : "Offline"}
+                  </p>
                 </div>
               </div>
-              <div className={styles.rootHeaderActions}>
-                <button
-                  type="button"
-                  aria-label="Voice Call"
-                  disabled={isCallActive}
-                  onClick={() => handleStartCall("audio")}
-                >
-                  Call
-                </button>
-                <button
-                  type="button"
-                  aria-label="Video Call"
-                  disabled={isCallActive}
-                  onClick={() => handleStartCall("video")}
-                >
-                  Video
-                </button>
-                {/* <button type="button" aria-label="Open More Options">
-                  More
-                </button> */}
-              </div>
+              {!isGroupSelected && (
+                <div className={styles.rootHeaderActions}>
+                  <button
+                    type="button"
+                    aria-label="Voice Call"
+                    disabled={isCallActive}
+                    onClick={() => handleStartCall("audio")}
+                  >
+                    Call
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Video Call"
+                    disabled={isCallActive}
+                    onClick={() => handleStartCall("video")}
+                  >
+                    Video
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className={styles.rootContent} ref={contentRef} onScroll={handleMessagesScroll}>
@@ -708,6 +775,14 @@ const Chatbox = () => {
                           </div>
                         )}
                       </div>
+                    )}
+                    {isGroupSelected && !isMine && (
+                      <span
+                        className={styles.rootContentSenderName}
+                        style={{ color: `hsl(${getSenderHue(m.senderId)}, 70%, 68%)` }}
+                      >
+                        {getGroupSenderName(selectedChat, m)}
+                      </span>
                     )}
                     {isLocationMessage && m.location ? (
                       <div className={styles.rootContentMap}>
@@ -913,9 +988,57 @@ const Chatbox = () => {
         <div className={styles.newChatOverlay} onClick={() => !isStartingChat && setShowNewChatModal(false)}>
           <div className={styles.newChatModal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.newChatHeader}>
-              <h3>Start New Chat</h3>
+              <h3>{newChatMode === "group" ? "Create Group" : "Start New Chat"}</h3>
               <button type="button" onClick={() => setShowNewChatModal(false)} disabled={isStartingChat}>Close</button>
             </div>
+            <div className={styles.newChatTabs}>
+              <button
+                type="button"
+                className={`${styles.newChatTab} ${newChatMode === "direct" ? styles.newChatTabActive : ""}`}
+                onClick={() => setNewChatMode("direct")}
+                disabled={isStartingChat}
+              >
+                Direct
+              </button>
+              <button
+                type="button"
+                className={`${styles.newChatTab} ${newChatMode === "group" ? styles.newChatTabActive : ""}`}
+                onClick={() => setNewChatMode("group")}
+                disabled={isStartingChat}
+              >
+                Group
+              </button>
+            </div>
+            {newChatMode === "group" && (
+              <>
+                <div className={styles.newChatSearch}>
+                  <input
+                    type="text"
+                    placeholder="Group name"
+                    value={groupName}
+                    disabled={isStartingChat}
+                    onChange={(e) => setGroupName(e.target.value)}
+                  />
+                </div>
+                {selectedGroupUsers.length > 0 && (
+                  <div className={styles.newChatChips}>
+                    {selectedGroupUsers.map((u) => (
+                      <span key={u._id} className={styles.newChatChip}>
+                        {u.name}
+                        <button
+                          type="button"
+                          aria-label={`Remove ${u.name}`}
+                          onClick={() => toggleGroupUser(u)}
+                          disabled={isStartingChat}
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
             <div className={styles.newChatSearch}>
               <input
                 type="email"
@@ -923,7 +1046,6 @@ const Chatbox = () => {
                 value={searchUserEmail}
                 disabled={isUsersLoading || isStartingChat}
                 onChange={(e) => {
-                  // setSearchUserEmail(e.target.value);
                   handleSearchUser(e);
                 }}
               />
@@ -938,19 +1060,42 @@ const Chatbox = () => {
                 </div>
               )}
               {!isUsersLoading && users.length === 0 && <p className={styles.newChatEmpty}>No user found.</p>}
-              {!isUsersLoading && users.map((user) => (
-                <button
-                  key={user._id}
-                  type="button"
-                  className={styles.newChatUser}
-                  onClick={() => handleStartNewChat(user._id)}
-                  disabled={isStartingChat || isUsersLoading}
-                >
-                  <span>{user.name}</span>
-                  <small>{user.email}</small>
-                </button>
-              ))}
+              {!isUsersLoading && users.map((user) => {
+                const isSelected = selectedGroupUsers.some((u) => u._id === user._id);
+                return (
+                  <button
+                    key={user._id}
+                    type="button"
+                    className={`${styles.newChatUser} ${newChatMode === "group" && isSelected ? styles.newChatUserSelected : ""}`}
+                    onClick={() =>
+                      newChatMode === "group" ? toggleGroupUser(user) : handleStartNewChat(user._id)
+                    }
+                    disabled={isStartingChat || isUsersLoading}
+                  >
+                    <span>{user.name}</span>
+                    <small>{user.email}</small>
+                    {newChatMode === "group" && isSelected && (
+                      <span className={styles.newChatUserCheck}>
+                        <Check size={16} strokeWidth={2.5} />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
+            {newChatMode === "group" && (
+              <div className={styles.newChatFooter}>
+                <button
+                  type="button"
+                  onClick={handleCreateGroup}
+                  disabled={isStartingChat || !groupName.trim() || selectedGroupUsers.length === 0}
+                >
+                  {isStartingChat
+                    ? "Creating…"
+                    : `Create Group${selectedGroupUsers.length ? ` (${selectedGroupUsers.length + 1} members)` : ""}`}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -4,7 +4,7 @@ import cx from "classnames";
 import { Familjen_Grotesk } from "next/font/google";
 import React, { memo, useEffect, useState } from "react";
 import ReactDOM from "react-dom";
-import Image from "next/image";
+import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
 import { miscStore } from "@/src/stores/miscStore";
 
 import styles from "./Snackbar.module.scss";
@@ -19,6 +19,14 @@ const familjenGrotesk = Familjen_Grotesk({
 });
 
 const DEFAULT_TIME = 4000;
+const EXIT_ANIMATION_MS = 260;
+
+const TYPE_CONFIG = {
+    s: { icon: CheckCircle2, label: "Success", className: styles.rootSuccess },
+    e: { icon: XCircle, label: "Error", className: styles.rootError },
+    w: { icon: AlertTriangle, label: "Warning", className: styles.rootWarning },
+    i: { icon: Info, label: "Info", className: styles.rootInfo },
+} as const;
 
 const Snackbar = ({ time = DEFAULT_TIME }: { time?: number }) => {
     const notification = miscStore((s) => s.notification);
@@ -36,24 +44,23 @@ const Snackbar = ({ time = DEFAULT_TIME }: { time?: number }) => {
     useEffect(() => {
         if (message && message !== "WebSocket connection error") {
             setShow(true);
-            const timeout = setTimeout(() => {
-                setShow(false);
-                setNotification(null);
-            }, time);
-            return () => clearTimeout(timeout);
+            const hideTimeout = setTimeout(() => setShow(false), time);
+            const clearTimeout_ = setTimeout(
+                () => setNotification(null),
+                time + EXIT_ANIMATION_MS
+            );
+            return () => {
+                clearTimeout(hideTimeout);
+                clearTimeout(clearTimeout_);
+            };
         }
         setShow(false);
-    }, [message, setNotification, time]);
+    }, [notification, message, setNotification, time]);
 
-    const barStyle = cx(
-        styles.root,
-        {
-            [styles.rootWarning]: type === "w",
-            [styles.rootSucess]: type === "s",
-            [styles.rootError]: type === "e",
-        },
-        { [styles.show]: show }
-    );
+    const handleDismiss = () => {
+        setShow(false);
+        setTimeout(() => setNotification(null), EXIT_ANIMATION_MS);
+    };
 
     if (!message || !isMounted) return null;
 
@@ -64,31 +71,40 @@ const Snackbar = ({ time = DEFAULT_TIME }: { time?: number }) => {
 
     if (!portalsRoot) return null;
 
+    const config = TYPE_CONFIG[(type as keyof typeof TYPE_CONFIG) || "i"] || TYPE_CONFIG.i;
+    const Icon = config.icon;
+
     return ReactDOM.createPortal(
-        <div className={cx(barStyle, familjenGrotesk.className)}>
-            <p>{message}</p>
-            <span
-                role="button"
-                tabIndex={0}
-                onClick={() => {
-                    setShow(false);
-                    setNotification(null);
-                }}
-                onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setShow(false);
-                        setNotification(null);
-                    }
-                }}
-            >
-                <Image
-                    src="/icon-cross.svg"
-                    alt="Dismiss"
-                    width={20}
-                    height={20}
-                />
+        <div
+            role="status"
+            aria-live="polite"
+            className={cx(
+                styles.root,
+                config.className,
+                show ? styles.rootShow : styles.rootHide,
+                familjenGrotesk.className
+            )}
+        >
+            <span className={styles.rootIcon} aria-hidden>
+                <Icon size={18} strokeWidth={2.25} />
             </span>
+            <div className={styles.rootBody}>
+                <strong>{config.label}</strong>
+                <p>{message}</p>
+            </div>
+            <button
+                type="button"
+                className={styles.rootClose}
+                aria-label="Dismiss notification"
+                onClick={handleDismiss}
+            >
+                <X size={15} />
+            </button>
+            <span
+                className={styles.rootProgress}
+                style={{ animationDuration: `${time}ms` }}
+                aria-hidden
+            />
         </div>,
         portalsRoot
     );
