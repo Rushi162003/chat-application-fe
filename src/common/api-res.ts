@@ -30,7 +30,7 @@ export interface ChatResponse {
     unreadCount: number;
 }
 
-export type MessageType = "text" | "location";
+export type MessageType = "text" | "location" | "image" | "video0";
 
 export interface MessageLocation {
     lat: number;
@@ -44,6 +44,8 @@ export interface MessageResponse {
     text: string;
     type?: MessageType;    
     location?: MessageLocation;
+    image?: string;
+    video?: string;
     readBy: string[];
     deliveredTo: string[];
     createdAt: Date;

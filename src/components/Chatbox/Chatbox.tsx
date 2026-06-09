@@ -18,11 +18,12 @@ import { API_ENDPOINTS, SOCKET_EVENTS } from "@/src/common/enums";
 import Message from "../Snackbar/message";
 import { ChatResponse, MessageResponse, User } from "@/src/common/api-res";
 import { miscStore } from "@/src/stores/miscStore";
-import { ArrowLeft, Check, CheckCheck, Image as ImageIcon, MapPin, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, Image as ImageIcon, MapPin, MoreVertical, Pencil, Plus, Trash2, X } from "lucide-react";
 import type { Socket } from "socket.io-client";
 import LocationMessageCard from "../LocationMap/LocationMessageCard";
 
 const MESSAGES_PAGE_SIZE = 20;
+const MAX_IMAGE_SIZE_MB = 5;
 
 /** Server may process `read-message` before `join-chat` finishes; ack + fallback avoids that race. */
 const READ_AFTER_JOIN_FALLBACK_MS = 250;
@@ -84,7 +85,7 @@ const getInitials = (value?: string) => {
 const Chatbox = () => {
   const router = useRouter();
   const socket = useSocket();
-  
+
   const {
     callStatus,
     callType,
@@ -130,7 +131,9 @@ const Chatbox = () => {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingMessageText, setEditingMessageText] = useState("");
   const [isSharingLocation, setIsSharingLocation] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [showAttachModal, setShowAttachModal] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const handleSendMessage = useCallback(() => {
     if (message.trim()) {
@@ -424,17 +427,41 @@ const Chatbox = () => {
     [selectedChat, me?._id, onlineUsers, isCallActive, startCall]
   );
 
-  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
-    setShowAttachModal(false);
-    if (!file) return;
+    if (!file || !selectedChat?._id || !socket) return;
     if (!file.type.startsWith("image/")) {
       Message.error("Please select an image file.");
       return;
     }
-    Message.info("Image sharing will be available once the backend upload API is connected.");
-  }, []);
+    if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+      Message.error(`Image must be smaller than ${MAX_IMAGE_SIZE_MB}MB.`);
+      return;
+    }
+
+    setIsUploadingImage(true);
+    const formData = new FormData();
+    formData.append("image", file);
+    const [response, error] = await axiosFetch({
+      method: "POST",
+      url: API_ENDPOINTS.UPLOAD,
+      requestConfig: { data: formData },
+    });
+    setIsUploadingImage(false);
+    const imageUrl = (response as { imageUrl?: string; url?: string } | null)?.imageUrl
+      || (response as { url?: string } | null)?.url;
+    if (error || !imageUrl) {
+      Message.error(error?.response?.data?.message || "Image upload failed.");
+      return;
+    }
+    socket.emit("send-message", {
+      chatId: selectedChat._id,
+      type: "image",
+      image: imageUrl,
+    });
+    setShowAttachModal(false);
+  }, [socket, selectedChat?._id]);
 
   useEffect(() => {
     fetchChats();
@@ -515,6 +542,15 @@ const Chatbox = () => {
     window.addEventListener("click", closeMenu);
     return () => window.removeEventListener("click", closeMenu);
   }, []);
+
+  useEffect(() => {
+    if (!previewImage) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPreviewImage(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [previewImage]);
 
   useEffect(() => {
     if (messagesRes && selectedChat?._id === messagesRes.chatId) {
@@ -634,11 +670,12 @@ const Chatbox = () => {
                       : styles.rootContentTickUnread;
 
                 const isLocationMessage = m.type === "location" && Boolean(m.location);
+                const isImageMessage = m.type === "image" && Boolean(m.image);
 
                 return (
                   <div
                     key={m._id}
-                    className={`${isMine ? styles.rootContentSent : styles.rootContentReceived} ${editingMessageId === m._id ? styles.rootContentEditing : ""} ${isLocationMessage ? styles.rootContentLocationBubble : ""}`}
+                    className={`${isMine ? styles.rootContentSent : styles.rootContentReceived} ${editingMessageId === m._id ? styles.rootContentEditing : ""} ${isLocationMessage ? styles.rootContentLocationBubble : ""} ${isImageMessage ? styles.rootContentImageBubble : ""}`}
                   >
                     {isMine && (
                       <div className={styles.rootContentToolbar}>
@@ -658,7 +695,7 @@ const Chatbox = () => {
                             className={`${styles.rootContentActionsMenu} ${isNewestMessage ? styles.rootContentActionsMenuUp : ""}`}
                             onClick={(e) => e.stopPropagation()}
                           >
-                            {m.type !== "location" && (
+                            {m.type !== "location" && m.type !== "image" && (
                               <button type="button" onClick={() => handleStartEditMessage(m)}>
                                 <Pencil size={14} />
                                 Edit
@@ -676,6 +713,21 @@ const Chatbox = () => {
                       <div className={styles.rootContentMap}>
                         <LocationMessageCard lat={m.location.lat} lng={m.location.lng} />
                       </div>
+                    ) : isImageMessage && m.image ? (
+                      <button
+                        type="button"
+                        className={styles.rootContentImageLink}
+                        aria-label="View image"
+                        onClick={() => setPreviewImage(m.image || null)}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={m.image}
+                          alt="Shared image"
+                          className={styles.rootContentImage}
+                          loading="lazy"
+                        />
+                      </button>
                     ) : (
                       <p className={styles.rootContentText}>{m.text}</p>
                     )}
@@ -771,6 +823,25 @@ const Chatbox = () => {
           </div>
         )}
       </div>
+      {previewImage && (
+        <div className={styles.imagePreviewOverlay} onClick={() => setPreviewImage(null)}>
+          <button
+            type="button"
+            className={styles.imagePreviewClose}
+            aria-label="Close image preview"
+            onClick={() => setPreviewImage(null)}
+          >
+            <X size={20} />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={previewImage}
+            alt="Image preview"
+            className={styles.imagePreviewImg}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
       {callStatus === "incoming" && incomingCall && (
         <IncomingCallModal
           incomingCall={incomingCall}
@@ -796,7 +867,7 @@ const Chatbox = () => {
       {showAttachModal && selectedChat && (
         <div
           className={styles.attachOverlay}
-          onClick={() => !isSharingLocation && setShowAttachModal(false)}
+          onClick={() => !isSharingLocation && !isUploadingImage && setShowAttachModal(false)}
         >
           <div className={styles.attachModal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.attachHeader}>
@@ -804,7 +875,7 @@ const Chatbox = () => {
               <button
                 type="button"
                 onClick={() => setShowAttachModal(false)}
-                disabled={isSharingLocation}
+                disabled={isSharingLocation || isUploadingImage}
               >
                 Close
               </button>
@@ -814,7 +885,7 @@ const Chatbox = () => {
                 type="button"
                 className={styles.attachOption}
                 onClick={handleShareLocation}
-                disabled={isSharingLocation}
+                disabled={isSharingLocation || isUploadingImage}
               >
                 <span className={`${styles.attachOptionIcon} ${styles.attachOptionIcon_location}`}>
                   <MapPin size={20} />
@@ -826,12 +897,12 @@ const Chatbox = () => {
                 type="button"
                 className={styles.attachOption}
                 onClick={() => imageInputRef.current?.click()}
-                disabled={isSharingLocation}
+                disabled={isSharingLocation || isUploadingImage}
               >
                 <span className={`${styles.attachOptionIcon} ${styles.attachOptionIcon_image}`}>
                   <ImageIcon size={20} />
                 </span>
-                <span>Image</span>
+                <span>{isUploadingImage ? "Uploading…" : "Image"}</span>
                 <small>Send a photo from your device</small>
               </button>
             </div>

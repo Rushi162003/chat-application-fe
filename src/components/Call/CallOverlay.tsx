@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 function RemoteAudio({ stream }: { stream: MediaStream | null }) {
   const ref = useRef<HTMLAudioElement>(null);
@@ -42,6 +42,44 @@ export default function CallOverlay({
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
+  const localBoxRef = useRef<HTMLDivElement>(null);
+  const dragStateRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const [localBoxPos, setLocalBoxPos] = useState<{ x: number; y: number } | null>(null);
+
+  const handleLocalBoxPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const box = localBoxRef.current;
+    if (!box) return;
+    const rect = box.getBoundingClientRect();
+    e.preventDefault();
+    box.setPointerCapture(e.pointerId);
+    dragStateRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: rect.left,
+      origY: rect.top,
+    };
+  }, []);
+
+  const handleLocalBoxPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragStateRef.current;
+    const box = localBoxRef.current;
+    const area = box?.parentElement;
+    if (!drag || !box || !area) return;
+    const areaRect = area.getBoundingClientRect();
+    const boxRect = box.getBoundingClientRect();
+    const maxX = Math.max(areaRect.width - boxRect.width, 0);
+    const maxY = Math.max(areaRect.height - boxRect.height, 0);
+    const x = Math.min(Math.max(drag.origX + e.clientX - drag.startX - areaRect.left, 0), maxX);
+    const y = Math.min(Math.max(drag.origY + e.clientY - drag.startY - areaRect.top, 0), maxY);
+    setLocalBoxPos({ x, y });
+  }, []);
+
+  const handleLocalBoxPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragStateRef.current) return;
+    dragStateRef.current = null;
+    localBoxRef.current?.releasePointerCapture(e.pointerId);
+  }, []);
+
   useEffect(() => {
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = localStream;
@@ -82,13 +120,27 @@ export default function CallOverlay({
                 autoPlay
                 playsInline
               />
-              <video
-                ref={localVideoRef}
-                className={styles.localVideo}
-                autoPlay
-                playsInline
-                muted
-              />
+              <div
+                ref={localBoxRef}
+                className={styles.localVideoBox}
+                style={
+                  localBoxPos
+                    ? { left: localBoxPos.x, top: localBoxPos.y, right: "auto", bottom: "auto" }
+                    : undefined
+                }
+                onPointerDown={handleLocalBoxPointerDown}
+                onPointerMove={handleLocalBoxPointerMove}
+                onPointerUp={handleLocalBoxPointerUp}
+                onPointerCancel={handleLocalBoxPointerUp}
+              >
+                <video
+                  ref={localVideoRef}
+                  className={styles.localVideo}
+                  autoPlay
+                  playsInline
+                  muted
+                />
+              </div>
             </>
           ) : (
             <div className={styles.audioAvatar}>

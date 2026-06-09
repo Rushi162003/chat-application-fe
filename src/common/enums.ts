@@ -5,6 +5,7 @@ export enum API_ENDPOINTS {
     USERS = "/users",
     CHATS = "/chats",
     MESSAGES = "/chats/messages",
+    UPLOAD = "/upload",
 }
 
 export enum BE_API_ENDPOINTS {
@@ -13,6 +14,7 @@ export enum BE_API_ENDPOINTS {
     ME = "/api/auth/me",
     USERS = "/api/users",
     CHATS = "/api/chats",
+    UPLOAD = "/api/upload",
 }
 
 export enum PAGES {

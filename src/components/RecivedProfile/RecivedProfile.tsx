@@ -82,7 +82,13 @@ const RecivedProfile = ({
                             )}
                         </span>
                     )}
-                    <span>{profile?.lastMessage?.text || ""}</span>
+                    <span>
+                        {profile?.lastMessage?.type === "image"
+                            ? "Photo"
+                            : profile?.lastMessage?.type === "location"
+                                ? "Location"
+                                : profile?.lastMessage?.text || ""}
+                    </span>
                 </span>
             </div>
         </div>
