@@ -10,15 +10,29 @@ import type {
   IncomingCallPayload,
 } from "@/src/common/call-types";
 import Message from "@/src/components/Snackbar/message";
+import { getClientIceServers } from "@/src/common/ice-servers";
 
-const ICE_SERVERS: RTCIceServer[] = [
-  { urls: "stun:stun.relay.metered.ca:80" },
-  {
-    urls: [process.env.NEXT_PUBLIC_TURN_URL as string],
-    username: process.env.NEXT_PUBLIC_TURN_USERNAME,
-    credential: process.env.NEXT_PUBLIC_TURN_PASSWORD,
-  },
-];
+let cachedIceServers: RTCIceServer[] | null = null;
+
+async function resolveIceServers(): Promise<RTCIceServer[]> {
+  if (cachedIceServers) return cachedIceServers;
+
+  try {
+    const res = await fetch("/api/turn-credentials");
+    if (res.ok) {
+      const data = (await res.json()) as { iceServers?: RTCIceServer[] };
+      if (data.iceServers?.length) {
+        cachedIceServers = data.iceServers;
+        return cachedIceServers;
+      }
+    }
+  } catch {
+    /* fall back to build-time env */
+  }
+
+  cachedIceServers = getClientIceServers();
+  return cachedIceServers;
+}
 
 export type { CallStatus }; 
 
@@ -114,8 +128,21 @@ export function useWebRTC(socket: Socket | null) {
     setLocalStream(stream);
   }, []);
 
-  const createPeerConnection = useCallback(() => {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  const createPeerConnection = useCallback(async () => {
+    const iceServers = await resolveIceServers();
+    const hasTurn = iceServers.some(
+      (s) =>
+        typeof s.urls === "string"
+          ? s.urls.startsWith("turn")
+          : s.urls.some((u) => u.startsWith("turn"))
+    );
+    if (!hasTurn) {
+      console.warn(
+        "TURN credentials missing — calls may fail outside localhost. Set TURN_USERNAME and TURN_PASSWORD in production."
+      );
+    }
+
+    const pc = new RTCPeerConnection({ iceServers });
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
@@ -203,7 +230,7 @@ export function useWebRTC(socket: Socket | null) {
 
       try {
         const stream = await getUserMedia(type);
-        const pc = createPeerConnection();
+        const pc = await createPeerConnection();
         attachLocalStream(pc, stream);
         socket.emit(SOCKET_EVENTS.CALL_USER, {
           toUserId: peerUserId,
@@ -234,7 +261,7 @@ export function useWebRTC(socket: Socket | null) {
 
     try {
       const stream = await getUserMedia(incoming.callType);
-      const pc = createPeerConnection();
+      const pc = await createPeerConnection();
       attachLocalStream(pc, stream);
       socket.emit(SOCKET_EVENTS.CALL_ACCEPTED, {
         toUserId: incoming.fromUserId,
