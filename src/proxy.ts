@@ -15,9 +15,15 @@ export function proxy(request: NextRequest) {
 
   if (isPublicPath) {
     if (pathname === "/login" && accessToken) {
-      return NextResponse.redirect(new URL("/", request.url));
+      return NextResponse.redirect(new URL("/home", request.url));
     }
     return NextResponse.next();
+  }
+
+  if (pathname === "/") {
+    return NextResponse.redirect(
+      new URL(accessToken ? "/home" : "/login", request.url)
+    );
   }
 
   if (isMeApiPath && !accessToken) {
